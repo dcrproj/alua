@@ -1,0 +1,19 @@
+# Symfony
+alua-backend/vendor/
+alua-backend/var/
+alua-backend/.env.local
+alua-backend/.env.*.local
+
+# Next.js
+alua-frontend/node_modules/
+alua-frontend/.next/
+alua-frontend/out/
+alua-frontend/.env.local
+alua-frontend/.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
