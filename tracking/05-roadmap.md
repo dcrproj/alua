@@ -13,9 +13,9 @@
 ```
 Phase 0 — Cadrage          ██████ Terminée
 Phase 1 — Backend          ██████ Terminée
-Phase 2 — Frontend         ░░░░░░ À venir
-Phase 3 — SEO & contenu    ░░░░░░ À venir
-Phase 4 — Enrichissement   ░░░░░░ À venir
+Phase 2 — Frontend         ░░░░░░ En cours
+Phase 3 — Enrichissement   ░░░░░░ À venir
+Phase 4 — SEO & contenu    ░░░░░░ À venir
 Phase 5 — API B2B          ░░░░░░ À venir
 Phase 6 — Mise en prod     ░░░░░░ À venir
 ```
@@ -117,73 +117,56 @@ Phase 6 — Mise en prod     ░░░░░░ À venir
 
 ### 2.1 — Setup Next.js
 
-- [ ] Initialiser le projet Next.js 15 (App Router)
-- [ ] Setup Tailwind CSS + shadcn/ui
-- [ ] Setup MapLibre GL JS
-- [ ] Configuration des variables d'environnement
-- [ ] Connexion à l'API Symfony
+- [x] Initialiser le projet Next.js 16 (App Router)
+- [x] Setup Tailwind CSS + shadcn/ui
+- [x] Setup MapLibre GL JS
+- [x] Configuration des variables d'environnement
+- [x] Connexion à l'API Symfony
 
 ### 2.2 — Page Carte
 
-- [ ] Carte de base (martin self-hosted — tuiles servies depuis MBTiles généré en Phase 1)
-- [ ] Couche parcelles cadastrales (zoom > 15)
-- [ ] Couche transactions DVF (points colorés par prix/m²)
-- [ ] Couche DPE (points colorés par étiquette)
-- [ ] Sélecteur de fonds de carte (IGN, OpenStreetMap, Satellite, Cadastre) — différenciateur vs Pappers
-- [ ] Sélecteur de couches de données
-- [ ] Panneau latéral d'info au clic sur une parcelle
-- [ ] Couche PLU (zones colorées)
-- [ ] Zone Alsace-Moselle (67/68/57) grisée avec tooltip "Zone non disponible"
+- [x] Carte de base (martin self-hosted — tuiles servies depuis MBTiles généré en Phase 1)
+- [x] Couche parcelles cadastrales (zoom > 15)
+- [x] Couche transactions DVF (points colorés par prix/m²)
+- [x] Couche DPE (points colorés par étiquette)
+- [x] Sélecteur de fonds de carte (IGN, OpenStreetMap, Satellite, Cadastre) — différenciateur vs Pappers
+- [x] Sélecteur de couches de données
+- [x] Panneau latéral d'info au clic sur une parcelle (lazy-loading, updatedAt par section)
+- [ ] Couche PLU (zones colorées) — différé Phase 4
+- [x] Zone Alsace-Moselle (57/67/68) grisée — décision : pas de données disponibles, grisé à tous les niveaux
+
+### 2.2b — Découpage administratif (drill-down)
+
+> Ajout identifié comme étape manquante : navigation spatiale par niveaux administratifs.
+> Source : `geo.api.gouv.fr` (GeoJSON officiel Etalab, simplifié).
+
+- [x] Tables PostGIS `regions`, `departements`, `communes` (migration + import `app:import:admin`)
+- [x] Couche Régions cliquable (zoom 4–7) → zoom vers département
+- [x] Couche Départements cliquable (zoom 7–10) → zoom vers commune
+- [x] Couche Communes cliquable (zoom 10–14) → zoom vers parcelles
+- [x] Alsace-Moselle (57/67/68) grisée à tous les niveaux admin
+- [x] Toggle "Limites admin." dans le sélecteur de couches
 
 ### 2.3 — Fiches
 
-- [ ] Fiche Parcelle (`/parcelle/{id_parcelle}`)
-- [ ] Fiche Adresse (`/adresse/{ban_id}`)
-- [ ] Fiche Commune (`/commune/{code_insee}`)
-- [ ] Composants réutilisables : carte miniature, tableau transactions, badge DPE
+- [x] Fiche Parcelle (`/parcelle/{id_parcelle}`) — mini-carte, transactions DVF, DPE, comparaison commune
+- [x] Lien "Voir la fiche" dans l'InfoPanel
+- [x] Fiche Adresse (`/adresse/{ban_id}`)
+- [x] Fiche Commune (`/commune/{code_insee}`)
+- [x] Composants réutilisables : carte miniature, tableau transactions, badge DPE
 
 ### 2.4 — Recherche
 
-- [ ] Barre de recherche adresse (autocomplétion BAN)
-- [ ] Redirect vers fiche appropriée après sélection
+- [x] Barre de recherche adresse (autocomplétion BAN)
+- [x] Redirect vers fiche appropriée après sélection
 
 **Livrable :** application consultable publiquement (sans SEO optimisé)
 
 ---
 
-## Phase 3 — SEO & Contenu (Août 2026)
+## Phase 3 — Enrichissement données
 
-### 3.1 — Génération des URLs et sitemaps
-
-- [ ] Définir l'arborescence d'URLs SEO (voir `06-seo-strategie.md`)
-- [ ] Générer sitemap XML par type d'entité (communes, parcelles…)
-- [ ] Soumettre à Google Search Console
-
-### 3.2 — ISR pour les fiches
-
-- [ ] Configurer l'ISR Next.js par type de fiche
-- [ ] Balises méta dynamiques (title, description, Open Graph)
-- [ ] Données structurées JSON-LD (Schema.org : `Place`, `RealEstateListing`)
-- [ ] Breadcrumbs structurés
-
-### 3.3 — Contenu enrichi
-
-- [ ] Templates de texte dans les React Server Components Next.js (prix médian, évolution, DPE moyen…)
-- [ ] Graphiques d'évolution des prix (Recharts ou Chart.js)
-- [ ] Historique de la parcelle affiché dans la fiche
-
-### 3.4 — Publicité
-
-- [ ] Intégration Google AdSense
-- [ ] Positionnement des encarts pub (sans dégrader le Core Web Vitals)
-
-**Livrable :** site crawlable par Google avec contenu structuré
-
----
-
-## Phase 4 — Enrichissement données (T4 2026)
-
-- [ ] Import données risques (Géorisques API)
+- [x] Import données risques (Géorisques API)
 - [ ] Import secteurs ABF (Patrimoine)
 - [ ] Import BDNB (bâtiments)
 - [ ] Import RNIC (copropriétés)
@@ -195,6 +178,36 @@ Phase 6 — Mise en prod     ░░░░░░ À venir
 - [ ] POI à proximité (via Overpass API OpenStreetMap)
 
 **Livrable :** la plateforme la plus exhaustive du marché
+
+---
+
+## Phase 4 — SEO & Contenu
+
+### 4.1 — Génération des URLs et sitemaps
+
+- [ ] Définir l'arborescence d'URLs SEO (voir `06-seo-strategie.md`)
+- [ ] Générer sitemap XML par type d'entité (communes, parcelles…)
+- [ ] Soumettre à Google Search Console
+
+### 4.2 — ISR pour les fiches
+
+- [ ] Configurer l'ISR Next.js par type de fiche
+- [ ] Balises méta dynamiques (title, description, Open Graph)
+- [ ] Données structurées JSON-LD (Schema.org : `Place`, `RealEstateListing`)
+- [ ] Breadcrumbs structurés
+
+### 4.3 — Contenu enrichi
+
+- [ ] Templates de texte dans les React Server Components Next.js (prix médian, évolution, DPE moyen…)
+- [ ] Graphiques d'évolution des prix (Recharts ou Chart.js)
+- [ ] Historique de la parcelle affiché dans la fiche
+
+### 4.4 — Publicité
+
+- [ ] Intégration Google AdSense
+- [ ] Positionnement des encarts pub (sans dégrader le Core Web Vitals)
+
+**Livrable :** site crawlable par Google avec contenu structuré
 
 ---
 

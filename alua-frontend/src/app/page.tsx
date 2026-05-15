@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import SearchBar from '@/components/SearchBar'
 
 export default function Home() {
   return (
@@ -7,11 +8,12 @@ export default function Home() {
       <p className="text-muted-foreground text-center max-w-md">
         Explorez les données immobilières françaises : parcelles cadastrales, transactions DVF, diagnostics DPE.
       </p>
+      <SearchBar className="w-full max-w-md" />
       <Link
         href="/carte"
-        className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-3 rounded-md font-medium transition-colors"
+        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
-        Ouvrir la carte
+        Ouvrir la carte →
       </Link>
     </main>
   )

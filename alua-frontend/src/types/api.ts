@@ -66,6 +66,65 @@ export interface Commune {
   evolutionPrix: { annee: number; nbVentes: number; prixMedianM2: number | null }[]
 }
 
+export interface AddressParcelleRef {
+  idParcelle: string
+  section: string | null
+  numero: string | null
+  contenance: number | null
+  lon: number | null
+  lat: number | null
+}
+
+export interface AddressTransaction {
+  idMutation: string
+  date: string | null
+  nature: string | null
+  valeurFonciere: number | null
+  typeLocal: string | null
+  surfaceBati: number | null
+  surfaceCarrez: number | null
+  nombrePieces: number | null
+  idParcelle: string | null
+}
+
+export interface AddressDpe {
+  numeroDpe: string
+  date: string | null
+  dateFinValidite: string | null
+  etiquetteDpe: string | null
+  etiquetteGes: string | null
+  consoPrimaire: number | null
+  emissionGes: number | null
+  typeBatiment: string | null
+  surface: number | null
+}
+
+export interface Address {
+  banId: string
+  numero: string | null
+  voie: string | null
+  codePostal: string | null
+  commune: string | null
+  communeCode: string | null
+  lon: number | null
+  lat: number | null
+  parcelles: AddressParcelleRef[]
+  transactions: AddressTransaction[]
+  dpes: AddressDpe[]
+}
+
+export interface RisqueDisplay {
+  id: string
+  libelle: string
+  adresse: string
+  commune: string
+  type: 'naturel' | 'technologique'
+}
+
+export interface ParcelleRisques {
+  risques: RisqueDisplay[]
+}
+
 export interface ApiCollection<T> {
   'hydra:member': T[]
   'hydra:totalItems': number

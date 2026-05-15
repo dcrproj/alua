@@ -159,10 +159,25 @@ php8.3 bin/console doctrine:migrations:migrate --no-interaction
 
 ---
 
-## 10. Imports de données (ordre obligatoire)
+## 10. Migrations Doctrine
+
+```bash
+cd /home/david/www/alua/alua-backend
+php8.3 bin/console doctrine:migrations:migrate --no-interaction
+```
+
+---
+
+## 10b. Imports de données (ordre obligatoire)
+
+> Les migrations Doctrine créent les tables. Les vues matérialisées pour martin
+> sont gérées par `app:tiles:refresh` (voir section 11).
 
 ```bash
 # Dans un tmux pour chaque import long
+
+# 0. Limites administratives (~5 min, ~34 000 communes)
+php8.3 bin/console app:import:admin
 
 # 1. BAN — adresses (~1h)
 php8.3 bin/console app:import:ban --all
@@ -186,10 +201,53 @@ php8.3 bin/console app:import:dpe --only-link
 
 > **Disque** : vérifier `df -h /dev/sda1` avant chaque étape.
 > Supprimer les GeoJSON après tippecanoe, les tuiles dept après tile-join.
+>
+> **Après chaque re-import DVF ou DPE**, rafraîchir les vues matérialisées :
+> ```bash
+> php8.3 bin/console app:tiles:refresh
+> ```
 
 ---
 
-## 11. Tunnel SSH (développement Mac → VPS)
+## 10c. RGA (Retrait-Gonflement des Argiles)
+
+> **Aucun import nécessaire.** Le niveau d'aléa RGA est récupéré en temps réel via l'API Géorisques :
+> `https://georisques.gouv.fr/api/v1/rga?latlon=LON,LAT`
+> Retourne `{ codeExposition: "1"–"4", exposition: "..." }` — mapping : 1=Faible, 2=Moyen, 3=Important, 4=Très important.
+
+---
+
+## 11. Config martin (tile server PostGIS + MBTiles)
+
+```bash
+# En tant que david — créer le fichier de config
+cat > /home/david/martin.yaml <<'EOF'
+listen_addresses: "0.0.0.0:3000"
+
+postgres:
+  connection_string: "postgresql://alua:XXXXX@127.0.0.1:5432/alua"
+
+mbtiles:
+  - /home/david/data/alua_tiles/france-parcelles.mbtiles
+EOF
+chmod 600 /home/david/martin.yaml
+
+# En tant que root — mettre à jour le service systemd
+sed -i 's|ExecStart=.*|ExecStart=/usr/local/bin/martin --config /home/david/martin.yaml|' \
+  /etc/systemd/system/martin.service
+systemctl daemon-reload && systemctl restart martin
+
+# Vérifier que les 3 sources sont détectées
+curl -s http://localhost:3000/catalog | python3 -m json.tool | grep -E '"(france|view_)"'
+# Attendu : france-parcelles, view_transactions_tiles, view_dpe_tiles
+```
+
+> martin sert automatiquement toutes les tables/vues PostGIS avec colonne geometry
+> + tous les fichiers MBTiles déclarés dans le fichier de config.
+
+---
+
+## 12. Tunnel SSH (développement Mac → VPS) — optionnel
 
 ```bash
 # Dans un terminal dédié sur le Mac
@@ -203,7 +261,7 @@ DATABASE_URL="postgresql://alua:XXXXX@127.0.0.1:5432/alua?serverVersion=17&chars
 
 ---
 
-## 12. Crontabs (utilisateur david)
+## 13. Crontabs (utilisateur david)
 
 ```bash
 crontab -e
@@ -215,6 +273,9 @@ crontab -e
 
 # Worker Messenger : traite les jobs de refresh (relancé toutes les heures)
 0 * * * * cd /home/david/www/alua/alua-backend && php8.3 bin/console messenger:consume async --time-limit=3300 >> /var/log/alua-messenger.log 2>&1
+
+# Vues matérialisées martin (DVF + DPE) — après le refresh:check
+30 3 * * * cd /home/david/www/alua/alua-backend && php8.3 bin/console app:tiles:refresh >> /var/log/alua-tiles.log 2>&1
 ```
 
 ---
