@@ -125,6 +125,29 @@ export interface ParcelleRisques {
   risques: RisqueDisplay[]
 }
 
+export interface MonumentHistorique {
+  reference: string
+  denomination: string | null
+  titre: string | null
+  commune: string | null
+  protection: 'classé' | 'inscrit'
+  distanceM: number
+}
+
+export interface ParcellePatrimoine {
+  monuments: MonumentHistorique[]
+  enPerimetreAbf: boolean
+  importRequired?: boolean
+}
+
+export interface BatimentBdnb {
+  batimentGroupeId: string
+  anneeConstruction: number | null
+  nbLogements: number | null
+  usageNiveau1: string | null
+  millesime: string
+}
+
 export interface ApiCollection<T> {
   'hydra:member': T[]
   'hydra:totalItems': number

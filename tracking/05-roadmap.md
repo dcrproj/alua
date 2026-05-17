@@ -13,8 +13,8 @@
 ```
 Phase 0 — Cadrage          ██████ Terminée
 Phase 1 — Backend          ██████ Terminée
-Phase 2 — Frontend         ░░░░░░ En cours
-Phase 3 — Enrichissement   ░░░░░░ À venir
+Phase 2 — Frontend         ██████ Terminée (PLU différé Phase 4)
+Phase 3 — Enrichissement   ░░░░░░ En cours
 Phase 4 — SEO & contenu    ░░░░░░ À venir
 Phase 5 — API B2B          ░░░░░░ À venir
 Phase 6 — Mise en prod     ░░░░░░ À venir
@@ -167,8 +167,8 @@ Phase 6 — Mise en prod     ░░░░░░ À venir
 ## Phase 3 — Enrichissement données
 
 - [x] Import données risques (Géorisques API)
-- [ ] Import secteurs ABF (Patrimoine)
-- [ ] Import BDNB (bâtiments)
+- [x] Import secteurs ABF (Patrimoine — monuments historiques Mérimée)
+- [x] Import BDNB (bâtiments)
 - [ ] Import RNIC (copropriétés)
 - [ ] Import Sitadel (permis de construire)
 - [ ] Import SIRENE (entreprises à l'adresse — croiser avec parcelles)

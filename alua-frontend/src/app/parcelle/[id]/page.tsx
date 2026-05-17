@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import ParcelleMapWrapper from './ParcelleMapWrapper'
-import type { Parcelle, ParcelleTransaction, ParcelleTransactionLot, ParcelleDpe, SectionData, Commune, ParcelleRisques, RisqueDisplay } from '@/types/api'
+import type { Parcelle, ParcelleTransaction, ParcelleTransactionLot, ParcelleDpe, SectionData, Commune, ParcelleRisques, RisqueDisplay, ParcellePatrimoine, BatimentBdnb } from '@/types/api'
 import { formatPrice, formatDate, DpeBadge, PrixEvolutionChart, DpeDistributionBar } from '@/components/fiche'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!
@@ -74,6 +74,71 @@ function RisquesTable({ risques }: { risques: ParcelleRisques }) {
   )
 }
 
+function PatrimoineSection({ patrimoine }: { patrimoine: ParcellePatrimoine }) {
+  if (patrimoine.importRequired) return null
+  return (
+    <div className="border rounded-xl p-4 space-y-3">
+      <div className="flex items-baseline justify-between">
+        <h2 className="font-semibold text-sm">Patrimoine ABF</h2>
+        {patrimoine.enPerimetreAbf
+          ? <span className="text-xs font-medium text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full">Périmètre ABF</span>
+          : <span className="text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full">Hors périmètre</span>
+        }
+      </div>
+      {!patrimoine.enPerimetreAbf && (
+        <p className="text-sm text-muted-foreground">Aucun monument historique dans un rayon de 500 m.</p>
+      )}
+      {patrimoine.enPerimetreAbf && (
+        <>
+          <div className="space-y-2">
+            {patrimoine.monuments.map(m => (
+              <div key={m.reference} className="bg-orange-50 rounded-lg px-3 py-2.5">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="text-sm font-medium text-orange-900">{m.titre || m.denomination || m.reference}</p>
+                  <span className="text-xs text-orange-700 shrink-0">{m.distanceM} m</span>
+                </div>
+                <p className="text-xs text-orange-700/70 mt-0.5">
+                  {m.protection === 'classé' ? 'Classé MH' : 'Inscrit MH'}
+                  {m.denomination && m.titre ? ` · ${m.denomination}` : ''}
+                  {m.commune ? ` · ${m.commune}` : ''}
+                </p>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground border-t pt-2">
+            Tout projet de travaux visible depuis le monument ou dans son périmètre de 500 m est soumis à l&apos;avis de l&apos;ABF (délai 1–4 mois).
+          </p>
+        </>
+      )}
+    </div>
+  )
+}
+
+function BatimentSection({ batiments }: { batiments: SectionData<BatimentBdnb> }) {
+  if (!batiments.items.length) return null
+  return (
+    <div className="border rounded-xl p-4 space-y-3">
+      <h2 className="font-semibold text-sm">Bâtiment{batiments.items.length > 1 ? 's' : ''} (BDNB)</h2>
+      <div className="space-y-2">
+        {batiments.items.map(b => (
+          <div key={b.batimentGroupeId} className="bg-muted/40 rounded-lg px-3 py-2.5">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-sm font-medium">{b.usageNiveau1 ?? 'Usage non renseigné'}</p>
+              {b.anneeConstruction && (
+                <span className="text-xs text-muted-foreground shrink-0">Construit {b.anneeConstruction}</span>
+              )}
+            </div>
+            {b.nbLogements !== null && (
+              <p className="text-xs text-muted-foreground mt-0.5">{b.nbLogements} logement{b.nbLogements > 1 ? 's' : ''}</p>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground/60 border-t pt-2">Source : BDNB {batiments.items[0]?.millesime}</p>
+    </div>
+  )
+}
+
 function mainLot(lots: ParcelleTransactionLot[]) {
   return lots.find(l => l.typeLocal && l.typeLocal !== 'Dépendance' && (l.surfaceBati ?? l.surfaceCarrez)) ?? lots[0]
 }
@@ -112,12 +177,14 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
   const { id } = await params
   const communeCode = id.substring(0, 5)
 
-  const [parcelleRes, transactionsRes, dpesRes, communeRes, risquesRes] = await Promise.all([
+  const [parcelleRes, transactionsRes, dpesRes, communeRes, risquesRes, patrimoineRes, batimentRes] = await Promise.all([
     fetch(`${API_URL}/api/parcelles/${id}`, { headers: { Accept: 'application/ld+json' }, next: { revalidate: 3600 } }),
     fetch(`${API_URL}/api/parcelles/${id}/transactions`, { next: { revalidate: 3600 } }),
     fetch(`${API_URL}/api/parcelles/${id}/dpes`, { next: { revalidate: 3600 } }),
     fetch(`${API_URL}/api/communes/${communeCode}`, { headers: { Accept: 'application/ld+json' }, next: { revalidate: 3600 } }),
     fetch(`${API_URL}/api/parcelles/${id}/risques`, { next: { revalidate: 86400 } }),
+    fetch(`${API_URL}/api/parcelles/${id}/patrimoine`, { next: { revalidate: 86400 } }),
+    fetch(`${API_URL}/api/parcelles/${id}/batiment`, { next: { revalidate: 86400 } }),
   ])
 
   if (!parcelleRes.ok) notFound()
@@ -127,6 +194,8 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
   const dpes: SectionData<ParcelleDpe> = dpesRes.ok ? await dpesRes.json() : { items: [], updatedAt: null }
   const commune: Commune | null = communeRes.ok ? await communeRes.json() : null
   const risques: ParcelleRisques | null = risquesRes.ok ? await risquesRes.json() : null
+  const patrimoine: ParcellePatrimoine | null = patrimoineRes.ok ? await patrimoineRes.json() : null
+  const batiments: SectionData<BatimentBdnb> = batimentRes.ok ? await batimentRes.json() : { items: [], updatedAt: null }
 
   const addr = parcelle.address
   const adresseLabel = addr ? [addr.numero, addr.voie].filter(Boolean).join(' ') : null
@@ -284,6 +353,14 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
         {risques && risques.risques.length > 0 && (
           <RisquesTable risques={risques} />
         )}
+
+        {/* ── Patrimoine ABF ── */}
+        {patrimoine && !patrimoine.importRequired && (
+          <PatrimoineSection patrimoine={patrimoine} />
+        )}
+
+        {/* ── Bâtiment BDNB ── */}
+        <BatimentSection batiments={batiments} />
 
         {/* ── Comparaison avec la commune ── */}
         {commune && (

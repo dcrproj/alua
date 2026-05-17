@@ -53,19 +53,7 @@ class ImportRgaCommand extends Command
 
         $io->writeln("Fichier : $file");
 
-        // Créer la table cible
-        $this->connection->executeStatement("
-            CREATE TABLE IF NOT EXISTS " . self::TABLE . " (
-                id         SERIAL PRIMARY KEY,
-                niveau_alea VARCHAR(50),
-                geometry   geometry(MultiPolygon, 4326)
-            )
-        ");
-        $this->connection->executeStatement(
-            "CREATE INDEX IF NOT EXISTS rga_zones_geom_idx ON " . self::TABLE . " USING GIST (geometry)"
-        );
-
-        $io->writeln('Table créée. Lancement de ogr2ogr…');
+        $io->writeln('Lancement de ogr2ogr…');
 
         $db = $this->connection->getParams();
         $dsn = sprintf(

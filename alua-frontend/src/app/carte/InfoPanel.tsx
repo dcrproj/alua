@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { X, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react'
-import type { Parcelle, ParcelleTransaction, ParcelleTransactionLot, ParcelleDpe, SectionData, ParcelleRisques, RisqueDisplay } from '@/types/api'
+import type { Parcelle, ParcelleTransaction, ParcelleTransactionLot, ParcelleDpe, SectionData, ParcelleRisques, RisqueDisplay, ParcellePatrimoine, BatimentBdnb } from '@/types/api'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!
 
@@ -237,6 +237,95 @@ function RisquesSection({ state, onOpen }: { state: RisquesState; onOpen: () => 
   )
 }
 
+// ---------- Patrimoine ----------
+
+type PatrimoineState = { status: 'idle' } | { status: 'loading' } | { status: 'done'; data: ParcellePatrimoine } | { status: 'error' }
+
+function PatrimoineSection({ state, onOpen }: { state: PatrimoineState; onOpen: () => void }) {
+  const [open, setOpen] = useState(false)
+
+  const toggle = () => {
+    const next = !open
+    setOpen(next)
+    if (next && state.status === 'idle') onOpen()
+  }
+
+  const badge = state.status === 'done'
+    ? (state.data.enPerimetreAbf
+        ? <span className="text-xs font-medium text-orange-700">Périmètre ABF</span>
+        : <span className="text-xs text-green-700">Hors périmètre</span>)
+    : null
+
+  return (
+    <div className="border-t border-border/50">
+      <button
+        className="w-full flex items-center gap-2 px-4 py-3 hover:bg-muted/30 transition-colors text-sm font-medium"
+        onClick={toggle}
+      >
+        <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${open ? 'rotate-90' : ''}`} />
+        <span>Patrimoine ABF</span>
+        {badge && <span className="ml-auto">{badge}</span>}
+        {state.status === 'loading' && <span className="text-xs text-muted-foreground font-normal ml-1">…</span>}
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4">
+          {state.status === 'loading' && <p className="text-xs text-muted-foreground">Chargement…</p>}
+          {state.status === 'error' && <p className="text-xs text-destructive">Erreur de chargement.</p>}
+          {state.status === 'done' && state.data.importRequired && (
+            <p className="text-xs text-muted-foreground italic">Import non effectué sur ce serveur.</p>
+          )}
+          {state.status === 'done' && !state.data.importRequired && !state.data.enPerimetreAbf && (
+            <p className="text-xs text-green-700">Aucun monument historique dans un rayon de 500 m.</p>
+          )}
+          {state.status === 'done' && state.data.enPerimetreAbf && (
+            <div className="space-y-2">
+              <p className="text-xs text-orange-700 font-medium mb-2">
+                {state.data.monuments.length} monument{state.data.monuments.length > 1 ? 's' : ''} dans le périmètre de 500 m
+              </p>
+              {state.data.monuments.map(m => (
+                <div key={m.reference} className="bg-orange-50 rounded-md px-3 py-2">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-xs font-medium text-orange-900 leading-tight">
+                      {m.titre || m.denomination || m.reference}
+                    </p>
+                    <span className="text-xs text-orange-700 shrink-0">{m.distanceM} m</span>
+                  </div>
+                  <p className="text-xs text-orange-700/70 mt-0.5">
+                    {m.protection === 'classé' ? 'Classé MH' : 'Inscrit MH'}
+                    {m.denomination && m.titre ? ` · ${m.denomination}` : ''}
+                  </p>
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground/60 mt-1">
+                Travaux soumis à avis ABF (délai 1–4 mois)
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------- Bâtiment BDNB ----------
+
+function BatimentCard({ b }: { b: BatimentBdnb }) {
+  return (
+    <div className="bg-muted/40 rounded-md px-3 py-2">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-xs font-medium">{b.usageNiveau1 ?? 'Usage inconnu'}</p>
+        {b.anneeConstruction && (
+          <span className="text-xs text-muted-foreground shrink-0">{b.anneeConstruction}</span>
+        )}
+      </div>
+      {b.nbLogements !== null && (
+        <p className="text-xs text-muted-foreground mt-0.5">{b.nbLogements} logement{b.nbLogements > 1 ? 's' : ''}</p>
+      )}
+    </div>
+  )
+}
+
 // ---------- Section générique ----------
 
 type SectionState<T> = { status: 'idle' } | { status: 'loading' } | { status: 'done'; data: SectionData<T> } | { status: 'error' }
@@ -307,6 +396,8 @@ export default function InfoPanel({ parcelle, loading, onClose }: Props) {
   const [transactions, setTransactions] = useState<SectionState<ParcelleTransaction>>({ status: 'idle' })
   const [dpes, setDpes] = useState<SectionState<ParcelleDpe>>({ status: 'idle' })
   const [risques, setRisques] = useState<RisquesState>({ status: 'idle' })
+  const [patrimoine, setPatrimoine] = useState<PatrimoineState>({ status: 'idle' })
+  const [batiments, setBatiments] = useState<SectionState<BatimentBdnb>>({ status: 'idle' })
 
   const fetchSection = useCallback(async <T,>(
     url: string,
@@ -331,6 +422,8 @@ export default function InfoPanel({ parcelle, loading, onClose }: Props) {
     setTransactions({ status: 'idle' })
     setDpes({ status: 'idle' })
     setRisques({ status: 'idle' })
+    setPatrimoine({ status: 'idle' })
+    setBatiments({ status: 'idle' })
   }
 
   return (
@@ -426,6 +519,38 @@ export default function InfoPanel({ parcelle, loading, onClose }: Props) {
                 }
               }}
             />
+
+            {/* Section Patrimoine */}
+            <PatrimoineSection
+              state={patrimoine}
+              onOpen={async () => {
+                setPatrimoine({ status: 'loading' })
+                try {
+                  const res = await fetch(`${API_URL}/api/parcelles/${parcelle.idParcelle}/patrimoine`)
+                  if (!res.ok) throw new Error()
+                  const data: ParcellePatrimoine = await res.json()
+                  setPatrimoine({ status: 'done', data })
+                } catch {
+                  setPatrimoine({ status: 'error' })
+                }
+              }}
+            />
+
+            {/* Section Bâtiment BDNB */}
+            <Section
+              title="Bâtiment(s)"
+              state={batiments}
+              onOpen={() => fetchSection<BatimentBdnb>(
+                `${API_URL}/api/parcelles/${parcelle.idParcelle}/batiment`,
+                setBatiments
+              )}
+            >
+              {(data) => (
+                <div className="space-y-2">
+                  {data.items.map((b) => <BatimentCard key={b.batimentGroupeId} b={b} />)}
+                </div>
+              )}
+            </Section>
           </>
         )}
       </div>

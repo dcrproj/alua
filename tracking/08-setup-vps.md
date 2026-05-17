@@ -166,6 +166,9 @@ cd /home/david/www/alua/alua-backend
 php8.3 bin/console doctrine:migrations:migrate --no-interaction
 ```
 
+> Les migrations créent toutes les tables (y compris `monuments_historiques` et `rga_zones`).
+> Les commandes d'import ne créent plus les tables elles-mêmes — migrations obligatoires en premier.
+
 ---
 
 ## 10b. Imports de données (ordre obligatoire)
@@ -209,7 +212,56 @@ php8.3 bin/console app:import:dpe --only-link
 
 ---
 
-## 10c. RGA (Retrait-Gonflement des Argiles)
+## 10c. Import ABF — Monuments historiques (base Mérimée)
+
+Requis pour afficher les périmètres ABF dans les fiches parcelles.
+
+```bash
+# ~5 min, ~43 000 monuments, ~30 MB en base
+cd /home/david/www/alua/alua-backend
+php8.3 bin/console app:import:abf
+
+# Vérifier
+psql -U alua -d alua -c "SELECT COUNT(*), protection FROM monuments_historiques GROUP BY protection;"
+```
+
+> Source : data.culture.gouv.fr (base Mérimée) — téléchargement automatique dans la commande.
+> Ré-import idempotent (ON CONFLICT DO UPDATE sur la référence Mérimée).
+
+---
+
+## 10d. BDNB — Bâtiments (groupes)
+
+Import des groupes de bâtiments depuis la Base de Données Nationale des Bâtiments (CSTB).
+Source : https://bdnb.io/download/ — exports CSV par département (millésime 2025-07-a).
+
+**Fraîcheur :** ~2 millésimes/an. Ré-import annuel recommandé.
+**Coût :** ~1-2h pour 96 depts (~20 GB de téléchargement, <1 GB disque temp par dept).
+
+```bash
+# Dans un tmux
+cd /home/david/www/alua/alua-backend
+
+# Test sur un département
+php8.3 bin/console app:import:bdnb --department=32
+
+# France entière (~1-2h)
+php8.3 bin/console app:import:bdnb --all
+
+# Vérifier
+psql -U alua -d alua -c "SELECT COUNT(*), usage_niveau_1 FROM batiment_bdnb GROUP BY usage_niveau_1 ORDER BY COUNT(*) DESC LIMIT 10;"
+```
+
+> Import idempotent (ON CONFLICT DO UPDATE sur parcelle_id + batiment_groupe_id).
+> Vérifier que les `parcelle_id` BDNB correspondent bien aux `id_parcelle` de la table `parcelles` :
+> ```sql
+> SELECT COUNT(*) FROM batiment_bdnb b
+> WHERE EXISTS (SELECT 1 FROM parcelles p WHERE p.id_parcelle = b.parcelle_id);
+> ```
+
+---
+
+## 10e. RGA (Retrait-Gonflement des Argiles)
 
 > **Aucun import nécessaire.** Le niveau d'aléa RGA est récupéré en temps réel via l'API Géorisques :
 > `https://georisques.gouv.fr/api/v1/rga?latlon=LON,LAT`
@@ -276,15 +328,24 @@ crontab -e
 
 # Vues matérialisées martin (DVF + DPE) — après le refresh:check
 30 3 * * * cd /home/david/www/alua/alua-backend && php8.3 bin/console app:tiles:refresh >> /var/log/alua-tiles.log 2>&1
+
+# Monuments historiques ABF (Mérimée) — mensuel, idempotent
+0 4 1 * * cd /home/david/www/alua/alua-backend && php8.3 bin/console app:import:abf >> /var/log/alua-abf.log 2>&1
+
+# BDNB — bâtiments — annuel (juin), nouveau millésime à ajuster manuellement
+# 0 2 15 6 * cd /home/david/www/alua/alua-backend && php8.3 bin/console app:import:bdnb --all >> /var/log/alua-bdnb.log 2>&1
 ```
 
 ---
 
 ## 13. Mises à jour récurrentes des données
 
-| Source | Commande | Fréquence |
-|--------|----------|-----------|
-| BAN | `app:import:ban --all` | ~75 jours |
-| PCI | `bash scripts/build-mbtiles-france.sh` | ~180 jours |
-| DVF | `bash scripts/import-dvf-france.sh` | 1×/an (mai) |
-| DPE | via Messenger (`app:refresh:check`) | 180 jours/dept |
+| Source | Commande | Fréquence | Stratégie |
+|--------|----------|-----------|-----------|
+| BAN | `app:import:ban --all` | ~75 jours | Cron |
+| PCI | `bash scripts/build-mbtiles-france.sh` | ~180 jours | Cron |
+| DVF | `bash scripts/import-dvf-france.sh` | 1×/an (mai) | Cron |
+| DPE | via Messenger (`app:refresh:check`) | 180 jours/dept | TTL Messenger |
+| Monuments historiques ABF | `app:import:abf` | Mensuel | Cron (1er du mois) |
+| BDNB bâtiments | `app:import:bdnb --all` | ~2×/an | Cron annuel (juin) |
+| Risques Géorisques | API temps-réel | Continu | Aucun (cache Next.js 24h) |

@@ -239,6 +239,90 @@ class ParcelleDataController extends AbstractController
         return $this->json(['risques' => $risques]);
     }
 
+    #[Route('/api/parcelles/{idParcelle}/patrimoine', methods: ['GET'])]
+    public function patrimoine(string $idParcelle): JsonResponse
+    {
+        $row = $this->connection->fetchAssociative(
+            'SELECT ST_X(centroid) AS lon, ST_Y(centroid) AS lat
+             FROM parcelles WHERE id_parcelle = :id',
+            ['id' => $idParcelle]
+        );
+
+        if (!$row || $row['lon'] === null) {
+            return $this->json(['monuments' => [], 'enPerimetreAbf' => false]);
+        }
+
+        // Vérifie que la table existe
+        $exists = $this->connection->fetchOne(
+            "SELECT 1 FROM information_schema.tables WHERE table_name = 'monuments_historiques' AND table_schema = 'public'"
+        );
+        if (!$exists) {
+            return $this->json(['monuments' => [], 'enPerimetreAbf' => false, 'importRequired' => true]);
+        }
+
+        $lon = (float) $row['lon'];
+        $lat = (float) $row['lat'];
+
+        $monuments = $this->connection->fetchAllAssociative(
+            "SELECT reference, denomination, titre, commune, protection,
+                    ROUND(ST_Distance(
+                        geometry::geography,
+                        ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography
+                    ))::int AS distance_m
+             FROM monuments_historiques
+             WHERE ST_DWithin(
+                 geometry::geography,
+                 ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography,
+                 500
+             )
+             ORDER BY distance_m
+             LIMIT 10",
+            ['lon' => $lon, 'lat' => $lat]
+        );
+
+        return $this->json([
+            'monuments'      => array_map(fn(array $m) => [
+                'reference'  => $m['reference'],
+                'denomination'=> $m['denomination'],
+                'titre'      => $m['titre'],
+                'commune'    => $m['commune'],
+                'protection' => $m['protection'],
+                'distanceM'  => (int) $m['distance_m'],
+            ], $monuments),
+            'enPerimetreAbf' => count($monuments) > 0,
+        ]);
+    }
+
+    #[Route('/api/parcelles/{idParcelle}/batiment', methods: ['GET'])]
+    public function batiment(string $idParcelle): JsonResponse
+    {
+        $exists = $this->connection->fetchOne(
+            "SELECT 1 FROM information_schema.tables WHERE table_name = 'batiment_bdnb' AND table_schema = 'public'"
+        );
+        if (!$exists) {
+            return $this->json(['items' => [], 'updatedAt' => null, 'importRequired' => true]);
+        }
+
+        $rows = $this->connection->fetchAllAssociative(
+            'SELECT batiment_groupe_id, annee_construction, nb_logements, usage_niveau_1, millesime
+             FROM batiment_bdnb
+             WHERE parcelle_id = :id
+             ORDER BY nb_logements DESC NULLS LAST, annee_construction DESC NULLS LAST',
+            ['id' => $idParcelle]
+        );
+
+        return $this->json([
+            'items'     => array_map(fn(array $r) => [
+                'batimentGroupeId'  => $r['batiment_groupe_id'],
+                'anneeConstruction' => $r['annee_construction'] !== null ? (int) $r['annee_construction'] : null,
+                'nbLogements'       => $r['nb_logements'] !== null ? (int) $r['nb_logements'] : null,
+                'usageNiveau1'      => $r['usage_niveau_1'],
+                'millesime'         => $r['millesime'],
+            ], $rows),
+            'updatedAt' => null,
+        ]);
+    }
+
     /** Extrait tous les num_risque GASPAR ; si $filterCommune != null, limite à cette commune. */
     private function extractGasparCodes(mixed $req, ?string $filterCommune): array
     {
