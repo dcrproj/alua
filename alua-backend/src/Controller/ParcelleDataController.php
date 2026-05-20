@@ -323,6 +323,268 @@ class ParcelleDataController extends AbstractController
         ]);
     }
 
+    #[Route('/api/parcelles/{idParcelle}/coproprietes', methods: ['GET'])]
+    public function coproprietes(string $idParcelle): JsonResponse
+    {
+        // 1. Lien direct via références cadastrales RNIC
+        $rows = $this->connection->fetchAllAssociative(
+            'SELECT c.no_immatriculation, c.nom, c.nb_lots_total, c.nb_lots_principaux,
+                    c.nb_lots_habitation, c.nb_lots_stationnement, c.periode_construction,
+                    c.type_syndic, c.representant_legal, c.date_reglement,
+                    c.type_syndicat_copro, c.nb_asl, c.nb_aful, c.nb_unions_syndicat,
+                    c.syndicat_cooperatif, c.residence_service, c.date_immatriculation
+             FROM coproprietes c
+             JOIN coproprietes_parcelles cp ON cp.no_immatriculation = c.no_immatriculation
+             WHERE cp.parcelle_id = :id
+             ORDER BY c.nb_lots_total DESC NULLS LAST',
+            ['id' => $idParcelle]
+        );
+
+        // 2. Fallback proximité + matching adresse : le RNIC ne renseigne pas toujours les refs cadastrales
+        if (empty($rows)) {
+            $parcelInfo = $this->connection->fetchAssociative(
+                'SELECT ST_X(p.centroid) AS lon, ST_Y(p.centroid) AS lat, a.numero AS num_ban
+                 FROM parcelles p
+                 LEFT JOIN parcelles_addresses pa ON pa.parcelle_id = p.id
+                 LEFT JOIN addresses a ON a.id = pa.address_id
+                 WHERE p.id_parcelle = :id
+                 LIMIT 1',
+                ['id' => $idParcelle]
+            );
+
+            if ($parcelInfo && $parcelInfo['lon'] !== null) {
+                $lon   = (float) $parcelInfo['lon'];
+                $lat   = (float) $parcelInfo['lat'];
+                $delta = 0.0009; // bbox ~100 m
+
+                $nearby = $this->connection->fetchAllAssociative(
+                    'SELECT no_immatriculation, nom, nb_lots_total, nb_lots_principaux,
+                            nb_lots_habitation, nb_lots_stationnement, periode_construction,
+                            type_syndic, representant_legal, date_reglement,
+                            type_syndicat_copro, nb_asl, nb_aful, nb_unions_syndicat,
+                            syndicat_cooperatif, residence_service, date_immatriculation,
+                            adresse_reference,
+                            round((sqrt(power((lon - :lon) * 80600, 2) + power((lat - :lat) * 111000, 2)))::numeric, 1) AS dist_m
+                     FROM coproprietes
+                     WHERE lon BETWEEN :lonMin AND :lonMax
+                       AND lat BETWEEN :latMin AND :latMax
+                       AND lon IS NOT NULL AND lat IS NOT NULL
+                     ORDER BY dist_m
+                     LIMIT 5',
+                    [
+                        'lon'    => $lon,    'lat'    => $lat,
+                        'lonMin' => $lon - $delta, 'lonMax' => $lon + $delta,
+                        'latMin' => $lat - $delta, 'latMax' => $lat + $delta,
+                    ]
+                );
+
+                $numBan = trim((string) ($parcelInfo['num_ban'] ?? ''));
+
+                $rows = array_values(array_filter($nearby, function (array $r) use ($numBan): bool {
+                    if ((float) $r['dist_m'] > 30.0) return false;
+
+                    $adrRef = trim((string) ($r['adresse_reference'] ?? ''));
+                    if ($adrRef === '' || $numBan === '') return true; // pas d'info pour comparer
+
+                    // Extraire le numéro de rue en tête de l'adresse RNIC
+                    preg_match('/^\s*(\d+)/u', $adrRef, $m);
+                    $numRnic = $m[1] ?? null;
+
+                    return $numRnic === null || $numRnic === $numBan;
+                }));
+            }
+        }
+
+        $toItem = fn(array $r) => [
+            'noImmatriculation'   => $r['no_immatriculation'],
+            'nom'                 => $r['nom'],
+            'representantLegal'   => $r['representant_legal'],
+            'dateReglement'       => $r['date_reglement'],
+            'nbLotsTotal'         => $r['nb_lots_total'] !== null ? (int) $r['nb_lots_total'] : null,
+            'nbLotsPrincipaux'    => $r['nb_lots_principaux'] !== null ? (int) $r['nb_lots_principaux'] : null,
+            'nbLotsHabitation'    => $r['nb_lots_habitation'] !== null ? (int) $r['nb_lots_habitation'] : null,
+            'nbLotsStationnement' => $r['nb_lots_stationnement'] !== null ? (int) $r['nb_lots_stationnement'] : null,
+            'periodeConstruction' => $r['periode_construction'],
+            'typeSyndic'          => $r['type_syndic'],
+            'typeSyndicatCopro'   => $r['type_syndicat_copro'],
+            'nbAsl'               => $r['nb_asl'] !== null ? (int) $r['nb_asl'] : null,
+            'nbAful'              => $r['nb_aful'] !== null ? (int) $r['nb_aful'] : null,
+            'nbUnionsSyndicat'    => $r['nb_unions_syndicat'] !== null ? (int) $r['nb_unions_syndicat'] : null,
+            'syndicatCooperatif'  => $r['syndicat_cooperatif'] !== null ? ($r['syndicat_cooperatif'] === 't' || $r['syndicat_cooperatif'] === true) : null,
+            'residenceService'    => $r['residence_service'] !== null ? ($r['residence_service'] === 't' || $r['residence_service'] === true) : null,
+            'dateImmatriculation' => $r['date_immatriculation'],
+        ];
+
+        return $this->json([
+            'items'     => array_map($toItem, $rows),
+            'updatedAt' => null,
+        ]);
+    }
+
+    #[Route('/api/parcelles/{idParcelle}/permis', methods: ['GET'])]
+    public function permis(string $idParcelle): JsonResponse
+    {
+        $exists = $this->connection->fetchOne(
+            "SELECT 1 FROM information_schema.tables WHERE table_name = 'sitadel_permis' AND table_schema = 'public'"
+        );
+        if (!$exists) {
+            return $this->json(['items' => [], 'updatedAt' => null, 'importRequired' => true]);
+        }
+
+        $rows = $this->connection->fetchAllAssociative(
+            "SELECT sp.num_dau, sp.type_dau, sp.etat_dau, sp.commune_code, sp.an_depot,
+                    sp.date_autorisation, sp.date_doc, sp.date_daact,
+                    sp.nature_projet,
+                    sp.nb_logements_crees, sp.nb_logements_demolis,
+                    sp.surf_hab_creee, sp.surf_loc_creee
+             FROM sitadel_permis sp
+             JOIN parcelles p ON p.id_parcelle = :id
+             WHERE sp.commune_code = p.commune_code
+               AND (
+                 (sp.sec_cadastre1 IS NOT NULL AND UPPER(sp.sec_cadastre1) = UPPER(p.section)
+                  AND LPAD(sp.num_cadastre1, 4, '0') = p.numero)
+                 OR
+                 (sp.sec_cadastre2 IS NOT NULL AND UPPER(sp.sec_cadastre2) = UPPER(p.section)
+                  AND LPAD(sp.num_cadastre2, 4, '0') = p.numero)
+                 OR
+                 (sp.sec_cadastre3 IS NOT NULL AND UPPER(sp.sec_cadastre3) = UPPER(p.section)
+                  AND LPAD(sp.num_cadastre3, 4, '0') = p.numero)
+               )
+             ORDER BY sp.date_autorisation DESC NULLS LAST
+             LIMIT 20",
+            ['id' => $idParcelle]
+        );
+
+        $etatLabels = [
+            5 => 'Autorisé', 6 => 'Commencé', 7 => 'Achevé',
+            8 => 'Caduc',    9 => 'Annulé',   4 => 'Refusé',
+        ];
+        $natureLabels = [
+            1 => 'Construction neuve',
+            2 => 'Extension',
+            3 => 'Transformation',
+            4 => 'Changement de destination',
+        ];
+        $typeLabels = [
+            'PC' => 'Permis de construire',
+            'DP' => 'Déclaration préalable',
+            'PA' => "Permis d'aménager",
+            'PD' => 'Permis de démolir',
+        ];
+
+        $items = array_map(fn(array $r) => [
+            'numDau'             => $r['num_dau'],
+            'typeDau'            => $r['type_dau'],
+            'typeDauLibelle'     => $typeLabels[$r['type_dau']] ?? $r['type_dau'],
+            'etatDau'            => $r['etat_dau'] !== null ? (int) $r['etat_dau'] : null,
+            'etatDauLibelle'     => $etatLabels[(int) $r['etat_dau']] ?? null,
+            'anDepot'            => $r['an_depot'] !== null ? (int) $r['an_depot'] : null,
+            'dateAutorisation'   => $r['date_autorisation'],
+            'dateDoc'            => $r['date_doc'],
+            'dateDaact'          => $r['date_daact'],
+            'natureProjet'       => $r['nature_projet'] !== null ? (int) $r['nature_projet'] : null,
+            'natureProjetLibelle'=> $natureLabels[(int) ($r['nature_projet'] ?? 0)] ?? null,
+            'nbLogementsCrees'   => $r['nb_logements_crees'] !== null ? (int) $r['nb_logements_crees'] : null,
+            'nbLogementsDemolis' => $r['nb_logements_demolis'] !== null ? (int) $r['nb_logements_demolis'] : null,
+            'surfHabCreee'       => $r['surf_hab_creee'] !== null ? (int) $r['surf_hab_creee'] : null,
+            'surfLocCreee'       => $r['surf_loc_creee'] !== null ? (int) $r['surf_loc_creee'] : null,
+        ], $rows);
+
+        $updatedAt = $this->connection->fetchOne(
+            "SELECT MIN(updated_at) FROM sitadel_permis LIMIT 1"
+        );
+
+        return $this->json(['items' => $items, 'updatedAt' => $updatedAt ?: null]);
+    }
+
+    #[Route('/api/parcelles/{idParcelle}/entreprises', methods: ['GET'])]
+    public function entreprises(string $idParcelle): JsonResponse
+    {
+        $exists = $this->connection->fetchOne(
+            "SELECT 1 FROM information_schema.tables WHERE table_name = 'sirene_etablissements' AND table_schema = 'public'"
+        );
+        if (!$exists) {
+            return $this->json(['items' => [], 'updatedAt' => null, 'importRequired' => true]);
+        }
+
+        $rows = $this->connection->fetchAllAssociative(
+            "SELECT se.siret, se.siren,
+                    COALESCE(se.enseigne, se.denomination, ul.denomination) AS nom,
+                    se.naf_code, se.est_siege, se.date_creation
+             FROM sirene_etablissements se
+             JOIN parcelles p ON p.id_parcelle = :id
+             LEFT JOIN parcelles_addresses pa ON pa.parcelle_id = p.id
+             LEFT JOIN addresses a ON a.id = pa.address_id
+             LEFT JOIN sirene_unites_legales ul ON ul.siren = se.siren
+             WHERE se.commune_code = p.commune_code
+               AND se.geometry IS NOT NULL
+               AND COALESCE(se.enseigne, se.denomination, ul.denomination) IS NOT NULL
+               AND (
+                 -- Adresse BAN connue : même numéro de rue + proximité large
+                 (a.numero IS NOT NULL
+                    AND se.numero_voie = a.numero
+                    AND ST_DWithin(se.geometry::geography, p.centroid::geography, 200))
+                 OR
+                 -- Pas d'adresse BAN : proximité stricte uniquement
+                 (a.numero IS NULL
+                    AND ST_DWithin(se.geometry::geography, p.centroid::geography, 30))
+               )
+             ORDER BY
+               se.est_siege DESC,
+               se.date_creation DESC NULLS LAST
+             LIMIT 20",
+            ['id' => $idParcelle]
+        );
+
+        $updatedAt = $this->connection->fetchOne(
+            "SELECT MIN(updated_at) FROM sirene_etablissements LIMIT 1"
+        );
+
+        // Libellés NAF par division (2 premiers chiffres)
+        $nafDivisions = [
+            '01'=>'Agriculture','02'=>'Sylviculture','03'=>'Pêche',
+            '10'=>'Alimentation','11'=>'Boissons','13'=>'Textile','14'=>'Habillement',
+            '16'=>'Bois/papier','17'=>'Papier','18'=>'Imprimerie','20'=>'Chimie',
+            '21'=>'Pharma','22'=>'Plastique','23'=>'Matériaux','24'=>'Métallurgie',
+            '25'=>'Prod. métalliques','26'=>'Électronique','27'=>'Équip. électrique',
+            '28'=>'Machines','29'=>'Automobile','31'=>'Meubles','32'=>'Industries div.',
+            '33'=>'Réparation','35'=>'Énergie','36'=>'Eau','38'=>'Déchets',
+            '41'=>'Construction','42'=>'Génie civil','43'=>'Travaux spéciaux',
+            '45'=>'Commerce auto','46'=>'Commerce gros','47'=>'Commerce détail',
+            '49'=>'Transport','50'=>'Transport maritime','51'=>'Transport aérien',
+            '52'=>'Logistique','53'=>'Courrier/colis',
+            '55'=>'Hébergement','56'=>'Restauration',
+            '58'=>'Édition','59'=>'Cinéma/TV','61'=>'Télécom','62'=>'Informatique','63'=>'Services info',
+            '64'=>'Finance','65'=>'Assurance','66'=>'Services financiers',
+            '68'=>'Immobilier',
+            '69'=>'Juridique/compta','70'=>'Direction','71'=>'Architecture/ingé',
+            '72'=>'R&D','73'=>'Publicité','74'=>'Activités spécialisées','75'=>'Vétérinaire',
+            '77'=>'Location','78'=>'Intérim/RH','79'=>'Voyages','80'=>'Sécurité',
+            '81'=>'Services bâtiment','82'=>'Services bureau',
+            '84'=>'Administration publique',
+            '85'=>'Enseignement',
+            '86'=>'Santé','87'=>'Médico-social','88'=>'Action sociale',
+            '90'=>'Arts/spectacles','91'=>'Musées/bibliothèques','92'=>'Jeux/paris','93'=>'Sports/loisirs',
+            '94'=>'Associations','95'=>'Réparation','96'=>'Services personnels',
+        ];
+
+        $nafLibelle = fn(?string $code): ?string => $code
+            ? ($nafDivisions[substr($code, 0, 2)] ?? null)
+            : null;
+
+        $items = array_map(fn(array $r) => [
+            'siret'        => $r['siret'],
+            'siren'        => $r['siren'],
+            'nom'          => $r['nom'],
+            'nafCode'      => $r['naf_code'],
+            'nafLibelle'   => $nafLibelle($r['naf_code']),
+            'estSiege'     => $r['est_siege'] === 't' || $r['est_siege'] === true,
+            'dateCreation' => $r['date_creation'],
+        ], $rows);
+
+        return $this->json(['items' => $items, 'updatedAt' => $updatedAt ?: null]);
+    }
+
     /** Extrait tous les num_risque GASPAR ; si $filterCommune != null, limite à cette commune. */
     private function extractGasparCodes(mixed $req, ?string $filterCommune): array
     {

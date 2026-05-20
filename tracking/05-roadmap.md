@@ -169,9 +169,9 @@ Phase 6 — Mise en prod     ░░░░░░ À venir
 - [x] Import données risques (Géorisques API)
 - [x] Import secteurs ABF (Patrimoine — monuments historiques Mérimée)
 - [x] Import BDNB (bâtiments)
-- [ ] Import RNIC (copropriétés)
-- [ ] Import Sitadel (permis de construire)
-- [ ] Import SIRENE (entreprises à l'adresse — croiser avec parcelles)
+- [x] Import RNIC (copropriétés)
+- [x] Import Sitadel (permis de construire)
+- [x] Import SIRENE (entreprises à l'adresse — croiser avec parcelles)
 - [ ] Import locaux et parcelles des personnes morales DGFiP (propriétaires entreprises/collectivités)
 - [ ] Couches carto supplémentaires (altimétrie, géologie)
 - [ ] Intégration orthophotos historiques IGN

@@ -148,6 +148,54 @@ export interface BatimentBdnb {
   millesime: string
 }
 
+export interface Copropriete {
+  noImmatriculation: string
+  nom: string | null
+  representantLegal: string | null
+  dateReglement: string | null
+  nbLotsTotal: number | null
+  nbLotsPrincipaux: number | null
+  nbLotsHabitation: number | null
+  nbLotsStationnement: number | null
+  periodeConstruction: string | null
+  typeSyndic: string | null
+  typeSyndicatCopro: string | null
+  nbAsl: number | null
+  nbAful: number | null
+  nbUnionsSyndicat: number | null
+  syndicatCooperatif: boolean | null
+  residenceService: boolean | null
+  dateImmatriculation: string | null
+}
+
+export interface SitadelPermis {
+  numDau: string
+  typeDau: string
+  typeDauLibelle: string | null
+  etatDau: number | null
+  etatDauLibelle: string | null
+  anDepot: number | null
+  dateAutorisation: string | null
+  dateDoc: string | null
+  dateDaact: string | null
+  natureProjet: number | null
+  natureProjetLibelle: string | null
+  nbLogementsCrees: number | null
+  nbLogementsDemolis: number | null
+  surfHabCreee: number | null
+  surfLocCreee: number | null
+}
+
+export interface SireneEtablissement {
+  siret: string
+  siren: string
+  nom: string | null
+  nafCode: string | null
+  nafLibelle: string | null
+  estSiege: boolean
+  dateCreation: string | null
+}
+
 export interface ApiCollection<T> {
   'hydra:member': T[]
   'hydra:totalItems': number

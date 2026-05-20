@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { X, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react'
-import type { Parcelle, ParcelleTransaction, ParcelleTransactionLot, ParcelleDpe, SectionData, ParcelleRisques, RisqueDisplay, ParcellePatrimoine, BatimentBdnb } from '@/types/api'
+import type { Parcelle, ParcelleTransaction, ParcelleTransactionLot, ParcelleDpe, SectionData, ParcelleRisques, RisqueDisplay, ParcellePatrimoine, BatimentBdnb, Copropriete, SitadelPermis, SireneEtablissement } from '@/types/api'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!
 
@@ -326,6 +326,61 @@ function BatimentCard({ b }: { b: BatimentBdnb }) {
   )
 }
 
+// ---------- Permis Sitadel ----------
+
+const ETAT_COLORS: Record<string, string> = {
+  'Autorisé': 'text-blue-700',
+  'Commencé': 'text-amber-700',
+  'Achevé':   'text-green-700',
+  'Caduc':    'text-muted-foreground/50',
+  'Annulé':   'text-muted-foreground/50',
+  'Refusé':   'text-red-700',
+}
+
+function PermisCard({ p }: { p: SitadelPermis }) {
+  return (
+    <div className="bg-muted/40 rounded-md px-3 py-2">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-medium leading-tight">{p.natureProjetLibelle ?? p.typeDauLibelle ?? p.typeDau}</p>
+        {p.etatDauLibelle && (
+          <span className={`text-xs shrink-0 ${ETAT_COLORS[p.etatDauLibelle] ?? 'text-muted-foreground'}`}>
+            {p.etatDauLibelle}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+        {p.dateAutorisation && <span>{formatDate(p.dateAutorisation, { month: 'short', year: 'numeric' })}</span>}
+        {(p.nbLogementsCrees ?? 0) > 0 && <span>{p.nbLogementsCrees} lgmt</span>}
+        {(p.surfHabCreee ?? 0) > 0 && <span>{p.surfHabCreee} m²</span>}
+      </div>
+    </div>
+  )
+}
+
+// ---------- Établissements SIRENE ----------
+
+function EtablissementCard({ e }: { e: SireneEtablissement }) {
+  return (
+    <a
+      href={`https://annuaire-entreprises.data.gouv.fr/etablissement/${e.siret}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block bg-muted/40 hover:bg-muted/70 rounded-md px-3 py-2 transition-colors"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-medium leading-tight truncate">
+          {e.nom ?? <span className="italic text-muted-foreground">—</span>}
+        </p>
+        {e.estSiege && <span className="text-xs text-blue-700 shrink-0">Siège</span>}
+      </div>
+      <div className="mt-0.5 text-xs text-muted-foreground">
+        {e.nafLibelle ?? e.nafCode}
+        {e.dateCreation && <span className="ml-2">{formatDate(e.dateCreation, { month: 'short', year: 'numeric' })}</span>}
+      </div>
+    </a>
+  )
+}
+
 // ---------- Section générique ----------
 
 type SectionState<T> = { status: 'idle' } | { status: 'loading' } | { status: 'done'; data: SectionData<T> } | { status: 'error' }
@@ -398,6 +453,9 @@ export default function InfoPanel({ parcelle, loading, onClose }: Props) {
   const [risques, setRisques] = useState<RisquesState>({ status: 'idle' })
   const [patrimoine, setPatrimoine] = useState<PatrimoineState>({ status: 'idle' })
   const [batiments, setBatiments] = useState<SectionState<BatimentBdnb>>({ status: 'idle' })
+  const [coproprietes, setCoproprietes] = useState<SectionState<Copropriete>>({ status: 'idle' })
+  const [permis, setPermis] = useState<SectionState<SitadelPermis>>({ status: 'idle' })
+  const [etablissements, setEtablissements] = useState<SectionState<SireneEtablissement>>({ status: 'idle' })
 
   const fetchSection = useCallback(async <T,>(
     url: string,
@@ -424,6 +482,9 @@ export default function InfoPanel({ parcelle, loading, onClose }: Props) {
     setRisques({ status: 'idle' })
     setPatrimoine({ status: 'idle' })
     setBatiments({ status: 'idle' })
+    setCoproprietes({ status: 'idle' })
+    setPermis({ status: 'idle' })
+    setEtablissements({ status: 'idle' })
   }
 
   return (
@@ -548,6 +609,82 @@ export default function InfoPanel({ parcelle, loading, onClose }: Props) {
               {(data) => (
                 <div className="space-y-2">
                   {data.items.map((b) => <BatimentCard key={b.batimentGroupeId} b={b} />)}
+                </div>
+              )}
+            </Section>
+
+            {/* Section Copropriétés RNIC */}
+            <Section
+              title="Copropriété(s)"
+              state={coproprietes}
+              onOpen={() => fetchSection<Copropriete>(
+                `${API_URL}/api/parcelles/${parcelle.idParcelle}/coproprietes`,
+                setCoproprietes
+              )}
+            >
+              {(data) => (
+                <div className="space-y-2">
+                  {data.items.length === 0
+                    ? <p className="text-xs text-muted-foreground">Aucune copropriété enregistrée.</p>
+                    : data.items.map((c) => (
+                        <div key={c.noImmatriculation} className="bg-muted/40 rounded-lg px-2.5 py-2 space-y-1">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p className="text-xs font-medium">{c.nom ?? c.noImmatriculation}</p>
+                            {c.nbLotsTotal !== null && (
+                              <span className="text-xs text-muted-foreground shrink-0">{c.nbLotsTotal} lots</span>
+                            )}
+                          </div>
+                          {c.representantLegal && (
+                            <p className="text-xs text-muted-foreground">
+                              {c.representantLegal}{c.typeSyndic ? ` · ${c.typeSyndic}` : ''}
+                            </p>
+                          )}
+                          <div className="text-xs text-muted-foreground/60 flex flex-wrap gap-x-2">
+                            {c.nbLotsHabitation !== null && <span>{c.nbLotsHabitation} hab.</span>}
+                            {c.nbLotsStationnement !== null && <span>{c.nbLotsStationnement} stat.</span>}
+                            {c.syndicatCooperatif !== null && <span>{c.syndicatCooperatif ? 'Coopératif' : ''}</span>}
+                          </div>
+                        </div>
+                      ))
+                  }
+                </div>
+              )}
+            </Section>
+
+            {/* Section Permis Sitadel */}
+            <Section
+              title="Permis (Sitadel)"
+              state={permis}
+              onOpen={() => fetchSection<SitadelPermis>(
+                `${API_URL}/api/parcelles/${parcelle.idParcelle}/permis`,
+                setPermis
+              )}
+            >
+              {(data) => (
+                <div className="space-y-2">
+                  {data.items.length === 0
+                    ? <p className="text-xs text-muted-foreground">Aucun permis enregistré.</p>
+                    : data.items.map((p) => <PermisCard key={p.numDau} p={p} />)
+                  }
+                </div>
+              )}
+            </Section>
+
+            {/* Section Établissements SIRENE */}
+            <Section
+              title="Établissements (SIRENE)"
+              state={etablissements}
+              onOpen={() => fetchSection<SireneEtablissement>(
+                `${API_URL}/api/parcelles/${parcelle.idParcelle}/entreprises`,
+                setEtablissements
+              )}
+            >
+              {(data) => (
+                <div className="space-y-2">
+                  {data.items.length === 0
+                    ? <p className="text-xs text-muted-foreground">Aucun établissement enregistré.</p>
+                    : data.items.map((e) => <EtablissementCard key={e.siret} e={e} />)
+                  }
                 </div>
               )}
             </Section>

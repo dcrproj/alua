@@ -261,7 +261,85 @@ psql -U alua -d alua -c "SELECT COUNT(*), usage_niveau_1 FROM batiment_bdnb GROU
 
 ---
 
-## 10e. RGA (Retrait-Gonflement des Argiles)
+## 10e. RNIC — Copropriétés (data.gouv.fr)
+
+Import des copropriétés depuis le Registre National d'Immatriculation des Copropriétés.
+Source : data.gouv.fr — CSV national (~800 MB), mis à jour quotidiennement.
+TTL : 3 mois (dispatché via Messenger par `app:refresh:check` dès qu'au moins une ligne expire).
+
+```bash
+# Migrations obligatoires en premier
+php8.3 bin/console doctrine:migrations:migrate --no-interaction
+
+# Premier import (~15-30 min selon le VPS)
+cd /home/david/www/alua/alua-backend
+php8.3 bin/console app:import:rnic
+
+# Vérifier
+psql -U alua -d alua -c "SELECT COUNT(*) FROM coproprietes;"
+psql -U alua -d alua -c "SELECT COUNT(*) FROM coproprietes_parcelles;"
+psql -U alua -d alua -c "SELECT type_syndic, COUNT(*) FROM coproprietes GROUP BY type_syndic ORDER BY COUNT(*) DESC LIMIT 5;"
+```
+
+> Import idempotent (ON CONFLICT DO UPDATE sur no_immatriculation).
+> La table de jonction coproprietes_parcelles est remplacée atomiquement à chaque import (transaction MVCC).
+> Le refresh automatique est géré via TTL + Messenger : `app:refresh:check` (cron 3h du matin).
+
+---
+
+## 10f. Sitadel — Autorisations d'urbanisme (SDES / data.gouv.fr)
+
+Import des permis de construire, déclarations préalables, permis d'aménager et de démolir.
+Source : 4 CSV SDES via DiDo API — ~6M lignes au total, mis à jour mensuellement.
+TTL : 30 jours (dispatché via Messenger par `app:refresh:check`).
+
+```bash
+# Migration (crée sitadel_permis + indexes)
+php8.3 bin/console doctrine:migrations:migrate --no-interaction
+
+# Premier import (~3-4h, télécharge et parse les 4 fichiers)
+cd /home/david/www/alua/alua-backend
+php8.3 bin/console app:import:sitadel
+
+# Vérifier
+psql -U alua -d alua -c "SELECT type_dau, COUNT(*) FROM sitadel_permis GROUP BY type_dau ORDER BY COUNT(*) DESC;"
+psql -U alua -d alua -c "SELECT COUNT(*) FROM sitadel_permis WHERE sec_cadastre1 IS NOT NULL;"
+```
+
+> Import idempotent (ON CONFLICT DO UPDATE sur num_dau).
+> Le refresh automatique est géré via TTL + Messenger : `app:refresh:check` (cron 3h du matin, TTL 30 jours).
+> Les 4 fichiers : logements (PC/DP créant des logements), locaux non résidentiels, permis de démolir, permis d'aménager.
+
+---
+
+## 10g. SIRENE — Établissements actifs (INSEE / data.gouv.fr)
+
+> **Source :** `StockEtablissement_utf8.zip` (~2.6 GB ZIP, ~30M lignes, actifs seulement retenus).
+> Filtrés : `etatAdministratifEtablissement = A` ET `identifiantAdresseEtablissement` non vide.
+> Lien parcelle via : `sirene_etablissements.ban_id → addresses.ban_id → parcelles_addresses → parcelles`.
+> **TTL :** 30 jours, refresh automatique via Messenger (`app:refresh:check`).
+
+```bash
+# Migration (à exécuter avant le premier import)
+cd /home/david/www/alua/alua-backend
+php8.3 bin/console doctrine:migrations:migrate --no-interaction
+
+# Premier import (~30 min–1h selon VPS, filtre actifs+BAN ID seulement)
+php8.3 bin/console app:import:sirene
+
+# Vérification
+psql -U alua -d alua -c "SELECT COUNT(*) FROM sirene_etablissements;"
+psql -U alua -d alua -c "SELECT COUNT(*) FROM sirene_etablissements WHERE est_siege = true;"
+# Exemple de recherche par parcelle (test)
+# psql -U alua -d alua -c "SELECT se.siret, COALESCE(se.enseigne, se.denomination) AS nom, se.naf_code FROM sirene_etablissements se JOIN addresses a ON a.ban_id = se.ban_id JOIN parcelles_addresses pa ON pa.address_id = a.id JOIN parcelles p ON p.id = pa.parcelle_id WHERE p.id_parcelle = 'XXXXXXXXXXXXXXXXXXXXXXX' LIMIT 10;"
+```
+
+> Refresh automatique géré par TTL Messenger — pas de cron dédié.
+> Premier import manuel uniquement.
+
+---
+
+## 10h. RGA (Retrait-Gonflement des Argiles)
 
 > **Aucun import nécessaire.** Le niveau d'aléa RGA est récupéré en temps réel via l'API Géorisques :
 > `https://georisques.gouv.fr/api/v1/rga?latlon=LON,LAT`
@@ -334,6 +412,15 @@ crontab -e
 
 # BDNB — bâtiments — annuel (juin), nouveau millésime à ajuster manuellement
 # 0 2 15 6 * cd /home/david/www/alua/alua-backend && php8.3 bin/console app:import:bdnb --all >> /var/log/alua-bdnb.log 2>&1
+
+# RNIC (copropriétés) : refresh géré par TTL Messenger (app:refresh:check ci-dessus, TTL 3 mois)
+# Pas de cron dédié nécessaire — premier import manuel : php8.3 bin/console app:import:rnic
+
+# Sitadel (autorisations d'urbanisme) : refresh géré par TTL Messenger (TTL 30 jours)
+# Pas de cron dédié nécessaire — premier import manuel : php8.3 bin/console app:import:sitadel
+
+# SIRENE (établissements actifs) : refresh géré par TTL Messenger (TTL 30 jours)
+# Pas de cron dédié nécessaire — premier import manuel : php8.3 bin/console app:import:sirene
 ```
 
 ---
@@ -348,4 +435,7 @@ crontab -e
 | DPE | via Messenger (`app:refresh:check`) | 180 jours/dept | TTL Messenger |
 | Monuments historiques ABF | `app:import:abf` | Mensuel | Cron (1er du mois) |
 | BDNB bâtiments | `app:import:bdnb --all` | ~2×/an | Cron annuel (juin) |
+| RNIC copropriétés | via Messenger (`app:refresh:check`) | 3 mois | TTL Messenger |
+| Sitadel permis de construire | via Messenger (`app:refresh:check`) | 30 jours | TTL Messenger |
+| SIRENE établissements | via Messenger (`app:refresh:check`) | 30 jours | TTL Messenger |
 | Risques Géorisques | API temps-réel | Continu | Aucun (cache Next.js 24h) |

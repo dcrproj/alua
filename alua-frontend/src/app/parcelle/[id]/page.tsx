@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import ParcelleMapWrapper from './ParcelleMapWrapper'
-import type { Parcelle, ParcelleTransaction, ParcelleTransactionLot, ParcelleDpe, SectionData, Commune, ParcelleRisques, RisqueDisplay, ParcellePatrimoine, BatimentBdnb } from '@/types/api'
+import type { Parcelle, ParcelleTransaction, ParcelleTransactionLot, ParcelleDpe, SectionData, Commune, ParcelleRisques, RisqueDisplay, ParcellePatrimoine, BatimentBdnb, Copropriete, SitadelPermis, SireneEtablissement } from '@/types/api'
 import { formatPrice, formatDate, DpeBadge, PrixEvolutionChart, DpeDistributionBar } from '@/components/fiche'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!
@@ -114,6 +114,182 @@ function PatrimoineSection({ patrimoine }: { patrimoine: ParcellePatrimoine }) {
   )
 }
 
+function CoproprieteSection({ coproprietes }: { coproprietes: SectionData<Copropriete> }) {
+  if (!coproprietes.items.length) return null
+  return (
+    <div className="border rounded-xl p-4 space-y-4">
+      <h2 className="font-semibold text-sm">
+        Copropriété{coproprietes.items.length > 1 ? 's' : ''} (RNIC)
+      </h2>
+      {coproprietes.items.map(c => (
+        <div key={c.noImmatriculation} className="space-y-3">
+<div className="flex items-baseline justify-between gap-3">
+            <p className="text-sm font-semibold">{c.nom ?? c.noImmatriculation}</p>
+            <span className="text-xs text-muted-foreground/60 font-mono shrink-0">{c.noImmatriculation}</span>
+          </div>
+
+          {/* Syndic */}
+          {(c.representantLegal || c.typeSyndic) && (
+            <div className="bg-muted/40 rounded-lg px-3 py-2.5 space-y-1">
+              <p className="text-xs text-muted-foreground/60 font-medium uppercase tracking-wide">Syndic</p>
+              {c.representantLegal && (
+                <p className="text-sm">{c.representantLegal}{c.typeSyndic ? ` · ${c.typeSyndic}` : ''}</p>
+              )}
+            </div>
+          )}
+
+          {/* Lots */}
+          <div className="bg-muted/40 rounded-lg px-3 py-2.5 space-y-1.5">
+            <p className="text-xs text-muted-foreground/60 font-medium uppercase tracking-wide">Lots</p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              {c.nbLotsTotal != null && (
+                <><span className="text-muted-foreground">Total</span><span className="font-medium">{c.nbLotsTotal}</span></>
+              )}
+              {c.nbLotsPrincipaux != null && (
+                <><span className="text-muted-foreground">Principaux (hab. / com. / bur.)</span><span className="font-medium">{c.nbLotsPrincipaux}</span></>
+              )}
+              {c.nbLotsHabitation != null && (
+                <><span className="text-muted-foreground">Habitation</span><span className="font-medium">{c.nbLotsHabitation}</span></>
+              )}
+              {c.nbLotsStationnement != null && (
+                <><span className="text-muted-foreground">Stationnement / garage</span><span className="font-medium">{c.nbLotsStationnement}</span></>
+              )}
+            </div>
+          </div>
+
+          {/* Informations complémentaires */}
+          <div className="bg-muted/40 rounded-lg px-3 py-2.5 space-y-1.5">
+            <p className="text-xs text-muted-foreground/60 font-medium uppercase tracking-wide">Informations</p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              {c.typeSyndicatCopro && (
+                <><span className="text-muted-foreground">Type de syndicat</span><span>{c.typeSyndicatCopro}</span></>
+              )}
+              {(c.nbAsl != null || c.nbAful != null || c.nbUnionsSyndicat != null) && (
+                <><span className="text-muted-foreground">ASL / AFUL / Union</span>
+                <span>{c.nbAsl ?? 0} / {c.nbAful ?? 0} / {c.nbUnionsSyndicat ?? 0}</span></>
+              )}
+              {c.syndicatCooperatif != null && (
+                <><span className="text-muted-foreground">Syndicat coopératif</span><span>{c.syndicatCooperatif ? 'Oui' : 'Non'}</span></>
+              )}
+              {c.residenceService != null && (
+                <><span className="text-muted-foreground">Résidence service</span><span>{c.residenceService ? 'Oui' : 'Non'}</span></>
+              )}
+              {c.dateReglement && (
+                <><span className="text-muted-foreground">Règlement de copropriété</span><span>{formatDate(c.dateReglement)}</span></>
+              )}
+              {c.dateImmatriculation && (
+                <><span className="text-muted-foreground">Immatriculation</span><span>{formatDate(c.dateImmatriculation)}</span></>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+      <p className="text-xs text-muted-foreground/60 border-t pt-2">Source : RNIC — data.gouv.fr</p>
+    </div>
+  )
+}
+
+const ETAT_COLORS: Record<string, string> = {
+  'Autorisé': 'bg-blue-50 text-blue-700',
+  'Commencé': 'bg-orange-50 text-orange-700',
+  'Achevé':   'bg-green-50 text-green-700',
+  'Caduc':    'bg-gray-100 text-gray-500',
+  'Annulé':   'bg-gray-100 text-gray-500',
+  'Refusé':   'bg-red-50 text-red-700',
+}
+
+function PermisSection({ permis }: { permis: SectionData<SitadelPermis> }) {
+  if (!permis.items.length) return null
+  return (
+    <div className="border rounded-xl p-4 space-y-3">
+      <div className="flex items-baseline justify-between">
+        <h2 className="font-semibold text-sm">
+          Autorisation{permis.items.length > 1 ? 's' : ''} d&apos;urbanisme (Sitadel)
+        </h2>
+      </div>
+      <div className="space-y-2">
+        {permis.items.map(p => (
+          <div key={p.numDau} className="bg-muted/40 rounded-lg px-3 py-2.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium">{p.natureProjetLibelle ?? p.typeDauLibelle}</p>
+                <p className="text-xs text-muted-foreground">{p.typeDauLibelle}</p>
+              </div>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                {p.etatDauLibelle && (
+                  <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${ETAT_COLORS[p.etatDauLibelle] ?? 'bg-gray-100 text-gray-600'}`}>
+                    {p.etatDauLibelle}
+                  </span>
+                )}
+                <span className="text-xs text-muted-foreground">{formatDate(p.dateAutorisation ?? p.dateDaact)}</span>
+              </div>
+            </div>
+            {((p.nbLogementsCrees ?? 0) > 0 || (p.surfHabCreee ?? 0) > 0 || (p.surfLocCreee ?? 0) > 0) && (
+              <div className="flex flex-wrap gap-x-3 mt-1.5 text-xs text-muted-foreground">
+                {(p.nbLogementsCrees ?? 0) > 0 && (
+                  <span>{p.nbLogementsCrees} logement{p.nbLogementsCrees! > 1 ? 's' : ''}</span>
+                )}
+                {(p.surfHabCreee ?? 0) > 0 && <span>{p.surfHabCreee} m² hab.</span>}
+                {(p.surfLocCreee ?? 0) > 0 && <span>{p.surfLocCreee} m² loc.</span>}
+              </div>
+            )}
+            {(p.nbLogementsDemolis ?? 0) > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {p.nbLogementsDemolis} logement{p.nbLogementsDemolis! > 1 ? 's' : ''} démoli{p.nbLogementsDemolis! > 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground/60 border-t pt-2">Source : Sitadel — SDES / data.gouv.fr</p>
+    </div>
+  )
+}
+
+function EntreprisesSection({ etablissements }: { etablissements: SectionData<SireneEtablissement> }) {
+  if (!etablissements.items.length) return null
+  return (
+    <div className="border rounded-xl p-4 space-y-3">
+      <h2 className="font-semibold text-sm">
+        Établissement{etablissements.items.length > 1 ? 's' : ''} à proximité (SIRENE)
+      </h2>
+      <div className="space-y-2">
+        {etablissements.items.map(e => (
+          <a
+            key={e.siret}
+            href={`https://annuaire-entreprises.data.gouv.fr/etablissement/${e.siret}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block bg-muted/40 hover:bg-muted/70 rounded-lg px-3 py-2.5 transition-colors"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-0.5 min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {e.nom ?? <span className="text-muted-foreground italic">Raison sociale non renseignée</span>}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {[e.nafLibelle, e.nafCode].filter(Boolean).join(' · ')}
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                {e.estSiege && (
+                  <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700">Siège</span>
+                )}
+                {e.dateCreation && (
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(e.dateCreation).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
+                  </span>
+                )}
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground/60 border-t pt-2">Source : SIRENE — INSEE · Rayon 50 m · Cliquer pour voir la fiche officielle</p>
+    </div>
+  )
+}
+
 function BatimentSection({ batiments }: { batiments: SectionData<BatimentBdnb> }) {
   if (!batiments.items.length) return null
   return (
@@ -177,7 +353,7 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
   const { id } = await params
   const communeCode = id.substring(0, 5)
 
-  const [parcelleRes, transactionsRes, dpesRes, communeRes, risquesRes, patrimoineRes, batimentRes] = await Promise.all([
+  const [parcelleRes, transactionsRes, dpesRes, communeRes, risquesRes, patrimoineRes, batimentRes, coproprieteRes, permisRes, entreprisesRes] = await Promise.all([
     fetch(`${API_URL}/api/parcelles/${id}`, { headers: { Accept: 'application/ld+json' }, next: { revalidate: 3600 } }),
     fetch(`${API_URL}/api/parcelles/${id}/transactions`, { next: { revalidate: 3600 } }),
     fetch(`${API_URL}/api/parcelles/${id}/dpes`, { next: { revalidate: 3600 } }),
@@ -185,6 +361,9 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
     fetch(`${API_URL}/api/parcelles/${id}/risques`, { next: { revalidate: 86400 } }),
     fetch(`${API_URL}/api/parcelles/${id}/patrimoine`, { next: { revalidate: 86400 } }),
     fetch(`${API_URL}/api/parcelles/${id}/batiment`, { next: { revalidate: 86400 } }),
+    fetch(`${API_URL}/api/parcelles/${id}/coproprietes`, { next: { revalidate: 86400 } }),
+    fetch(`${API_URL}/api/parcelles/${id}/permis`, { next: { revalidate: 86400 } }),
+    fetch(`${API_URL}/api/parcelles/${id}/entreprises`, { next: { revalidate: 86400 } }),
   ])
 
   if (!parcelleRes.ok) notFound()
@@ -196,6 +375,9 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
   const risques: ParcelleRisques | null = risquesRes.ok ? await risquesRes.json() : null
   const patrimoine: ParcellePatrimoine | null = patrimoineRes.ok ? await patrimoineRes.json() : null
   const batiments: SectionData<BatimentBdnb> = batimentRes.ok ? await batimentRes.json() : { items: [], updatedAt: null }
+  const coproprietes: SectionData<Copropriete> = coproprieteRes.ok ? await coproprieteRes.json() : { items: [], updatedAt: null }
+  const permis: SectionData<SitadelPermis> = permisRes.ok ? await permisRes.json() : { items: [], updatedAt: null }
+  const etablissements: SectionData<SireneEtablissement> = entreprisesRes.ok ? await entreprisesRes.json() : { items: [], updatedAt: null }
 
   const addr = parcelle.address
   const adresseLabel = addr ? [addr.numero, addr.voie].filter(Boolean).join(' ') : null
@@ -361,6 +543,15 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
 
         {/* ── Bâtiment BDNB ── */}
         <BatimentSection batiments={batiments} />
+
+        {/* ── Copropriétés RNIC ── */}
+        <CoproprieteSection coproprietes={coproprietes} />
+
+        {/* ── Permis Sitadel ── */}
+        <PermisSection permis={permis} />
+
+        {/* ── Établissements SIRENE ── */}
+        <EntreprisesSection etablissements={etablissements} />
 
         {/* ── Comparaison avec la commune ── */}
         {commune && (
