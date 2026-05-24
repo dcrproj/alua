@@ -8,7 +8,29 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy backend
+      - uses: actions/checkout@v4
+
+      - name: Sync backend
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: alua-backend/
+          target: /home/david/www/alua/alua-backend
+          strip_components: 1
+
+      - name: Sync frontend
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: alua-frontend/
+          target: /home/david/www/alua/alua-frontend
+          strip_components: 1
+
+      - name: Post-deploy backend
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -16,7 +38,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: bash /home/david/www/alua/scripts/deploy-backend.sh
 
-      - name: Deploy frontend
+      - name: Post-deploy frontend
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
