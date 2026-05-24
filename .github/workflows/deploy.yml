@@ -10,38 +10,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Sync backend
-        uses: appleboy/scp-action@v0.1.7
+      - uses: webfactory/ssh-agent@v0.9.0
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: alua-backend/
-          target: /home/david/www/alua/alua-backend
-          strip_components: 1
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS to known hosts
+        run: ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Sync backend
+        run: |
+          rsync -az --delete \
+            --exclude='.env.local' \
+            --exclude='var/' \
+            --exclude='vendor/' \
+            alua-backend/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/david/www/alua/alua-backend/
 
       - name: Sync frontend
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: alua-frontend/
-          target: /home/david/www/alua/alua-frontend
-          strip_components: 1
+        run: |
+          rsync -az --delete \
+            --exclude='.env.local' \
+            --exclude='node_modules/' \
+            --exclude='.next/' \
+            alua-frontend/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/david/www/alua/alua-frontend/
 
       - name: Post-deploy backend
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: bash /home/david/www/alua/scripts/deploy-backend.sh
+        run: ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} 'bash /home/david/www/alua/scripts/deploy-backend.sh'
 
       - name: Post-deploy frontend
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: bash /home/david/www/alua/scripts/deploy-frontend.sh
+        run: ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} 'bash /home/david/www/alua/scripts/deploy-frontend.sh'
