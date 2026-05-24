@@ -10,13 +10,18 @@ PHP=php8.3
 
 cd "$APP_DIR"
 
-echo "[1/3] Composer install…"
+echo "[1/4] Composer install…"
 composer install --no-dev --optimize-autoloader --no-interaction
 
-echo "[2/3] Migrations…"
+echo "[2/4] Migrations…"
 $PHP bin/console doctrine:migrations:migrate --no-interaction
 
-echo "[3/3] Cache warmup…"
+echo "[3/4] Cache warmup…"
 $PHP bin/console cache:warmup
+
+echo "[4/4] Http cache dir…"
+# var/http_cache/ est hors de var/cache/prod/ — ne sera pas wipé par cache:warmup
+mkdir -p var/http_cache
+chmod 775 var/http_cache
 
 echo "Done — backend déployé."
