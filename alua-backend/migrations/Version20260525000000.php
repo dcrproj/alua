@@ -30,11 +30,14 @@ final class Version20260525000000 extends AbstractMigration
             )
         ");
 
-        // Résout les conflits : ajoute -code_insee pour les doublons
+        // Résout les conflits : ajoute -code_insee pour les doublons (CTE O(n))
         $this->addSql("
-            UPDATE communes c1
-            SET slug = c1.slug || '-' || c1.code_insee
-            WHERE (SELECT COUNT(*) FROM communes c2 WHERE c2.slug = c1.slug) > 1
+            WITH dupes AS (
+                SELECT slug FROM communes GROUP BY slug HAVING COUNT(*) > 1
+            )
+            UPDATE communes
+            SET slug = slug || '-' || code_insee
+            WHERE slug IN (SELECT slug FROM dupes)
         ");
 
         // Sécurité : slug vide ou null → code_insee

@@ -44,7 +44,7 @@ export default async function AdressePage({ params }: { params: Promise<{ banId:
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Carte', item: `${siteUrl}/carte` },
-        ...(address.communeCode ? [{ '@type': 'ListItem', position: 2, name: address.commune ?? address.communeCode, item: `${siteUrl}/commune/${address.communeCode}` }] : []),
+        ...(address.communeCode ? [{ '@type': 'ListItem', position: 2, name: address.commune ?? address.communeCode, item: `${siteUrl}/commune/${address.communeSlug ?? address.communeCode}` }] : []),
         { '@type': 'ListItem', position: address.communeCode ? 3 : 2, name: fullLabel, item: `${siteUrl}/adresse/${banId}` },
       ],
     },
@@ -95,7 +95,7 @@ export default async function AdressePage({ params }: { params: Promise<{ banId:
             <Link href="/carte" className="hover:text-white/80 transition-colors">Carte</Link>
             <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
             {address.communeCode && address.commune ? (
-              <Link href={`/commune/${address.communeCode}`} className="hover:text-white/80 transition-colors">
+              <Link href={`/commune/${address.communeSlug ?? address.communeCode}`} className="hover:text-white/80 transition-colors">
                 {address.commune}
               </Link>
             ) : (

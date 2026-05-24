@@ -282,6 +282,7 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
   const addr = parcelle.address
   const adresseLabel = addr ? [addr.numero, addr.voie].filter(Boolean).join(' ') : null
   const communeLabel = addr?.commune ?? commune?.nom ?? communeCode
+  const communeSlug  = commune?.slug ?? communeCode
   const parcelleMedian = medianPrixM2(transactions.items)
 
   // ── Résumé textuel ──────────────────────────────────────────────────────────
@@ -345,7 +346,7 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Carte', item: `${siteUrl}/carte` },
-        { '@type': 'ListItem', position: 2, name: communeLabel, item: `${siteUrl}/commune/${communeCode}` },
+        { '@type': 'ListItem', position: 2, name: communeLabel, item: `${siteUrl}/commune/${communeSlug}` },
         { '@type': 'ListItem', position: 3, name: id, item: `${siteUrl}/parcelle/${id}` },
       ],
     },
@@ -414,7 +415,7 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
         <div className="parcelle-breadcrumb">
           <Link href="/carte" className="hover:text-white/80 transition-colors">Carte</Link>
           <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
-          <Link href={`/commune/${communeCode}`} className="hover:text-white/80 transition-colors">{communeLabel}</Link>
+          <Link href={`/commune/${communeSlug}`} className="hover:text-white/80 transition-colors">{communeLabel}</Link>
           <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
           <span className="font-mono" style={{ color: 'rgba(255,255,255,0.9)' }}>{id}</span>
           {(dvfDate || dpeDate) && (
@@ -867,7 +868,7 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
           {commune && (
             <div className="pt-5 mt-5" style={{ borderTop: '1px solid var(--slate-200)' }}>
               <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--slate-900)', fontFamily: 'var(--font-body)' }}>
-                <Link href={`/commune/${communeCode}`} className="hover:underline" style={{ textDecorationColor: 'var(--slate-300)' }}>
+                <Link href={`/commune/${communeSlug}`} className="hover:underline" style={{ textDecorationColor: 'var(--slate-300)' }}>
                   {communeLabel}
                 </Link>
               </h4>

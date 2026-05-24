@@ -24,6 +24,15 @@ class SitemapController extends AbstractController
         return $this->json($rows);
     }
 
+    #[Route('/api/admin/regions', methods: ['GET'])]
+    public function regionsList(): JsonResponse
+    {
+        $rows = $this->connection->fetchAllAssociative(
+            'SELECT code, nom, slug FROM regions WHERE slug IS NOT NULL ORDER BY nom'
+        );
+        return $this->json($rows);
+    }
+
     #[Route('/api/sitemap/admin', methods: ['GET'])]
     public function admin(): JsonResponse
     {

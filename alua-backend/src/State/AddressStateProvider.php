@@ -21,10 +21,12 @@ final class AddressStateProvider implements ProviderInterface
         }
 
         $row = $this->connection->fetchAssociative(
-            'SELECT id, ban_id, numero, voie, code_postal, commune, commune_code,
-                    ST_X(geometry) as lon, ST_Y(geometry) as lat
-             FROM addresses
-             WHERE ban_id = :ban_id',
+            'SELECT a.id, a.ban_id, a.numero, a.voie, a.code_postal, a.commune, a.commune_code,
+                    ST_X(a.geometry) as lon, ST_Y(a.geometry) as lat,
+                    c.slug AS commune_slug
+             FROM addresses a
+             LEFT JOIN communes c ON c.code_insee = a.commune_code
+             WHERE a.ban_id = :ban_id',
             ['ban_id' => $banId]
         );
 
@@ -39,6 +41,7 @@ final class AddressStateProvider implements ProviderInterface
         $output->codePostal  = $row['code_postal'];
         $output->commune     = $row['commune'];
         $output->communeCode = $row['commune_code'];
+        $output->communeSlug = $row['commune_slug'] ?? null;
         $output->lon         = $row['lon'] !== null ? (float) $row['lon'] : null;
         $output->lat         = $row['lat'] !== null ? (float) $row['lat'] : null;
 

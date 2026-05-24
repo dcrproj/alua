@@ -21,6 +21,7 @@ final class AddressOutput
     public ?string $codePostal = null;
     public ?string $commune = null;
     public ?string $communeCode = null;
+    public ?string $communeSlug = null;
     public ?float $lon = null;
     public ?float $lat = null;
     public array $parcelles = [];     // parcelles liées

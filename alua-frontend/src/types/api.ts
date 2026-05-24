@@ -155,6 +155,7 @@ export interface Address {
   codePostal: string | null
   commune: string | null
   communeCode: string | null
+  communeSlug?: string | null
   lon: number | null
   lat: number | null
   parcelles: AddressParcelleRef[]

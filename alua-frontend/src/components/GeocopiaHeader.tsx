@@ -59,6 +59,21 @@ export default function GeocopiaHeader({ onSearchSelect, activeRoute }: Props) {
 
       {/* Nav — right */}
       <nav style={{ display: 'flex', gap: 2, marginLeft: 'auto', flexShrink: 0 }}>
+        <Link
+          href="/regions"
+          style={{
+            display: 'inline-flex', alignItems: 'center',
+            height: 30, padding: '0 12px',
+            borderRadius: 6, fontSize: 15, fontWeight: 500,
+            color: activeRoute === 'regions' ? 'var(--slate-900)' : 'var(--slate-600)',
+            background: activeRoute === 'regions' ? 'var(--slate-100)' : 'transparent',
+            textDecoration: 'none',
+            transition: 'background .15s, color .15s',
+          }}
+          className="hover:bg-[#f1f5f9] hover:text-[#1e293b]"
+        >
+          Régions
+        </Link>
         {activeRoute === 'carte' ? (
           <span style={{
             display: 'inline-flex', alignItems: 'center',
