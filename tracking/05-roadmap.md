@@ -435,10 +435,12 @@ directement sur le VPS selon les TTL.
 > TTFB trop lent sur les fiches à froid = risque Core Web Vitals = pénalité ranking.
 > Noté en mémoire projet depuis Phase 6.2.
 
+- [x] Timeouts agressifs sur les appels API externes (Géorisques 5s, Overpass 10s) — évite l'épuisement workers PHP-FPM
+- [x] Index Doctrine `CONCURRENTLY` (sans bloquer les tables) — migration `Version20260525100000`
+- [x] Script `tune-vps-root.sh` : PHP-FPM `pm.max_children = 30` + Nginx `fastcgi_cache` (à exécuter manuellement en tant que debian)
 - [ ] `generateStaticParams` sur les 2 000 communes les plus peuplées (pré-rendu ISR)
 - [ ] Script de warm-up post-deploy : GET sur les 500 fiches les plus consultées
 - [ ] `EXPLAIN ANALYZE` sur les requêtes PostGIS lentes (fiche parcelle : ST_DWithin KNN)
-- [ ] Index PostGIS manquants identifiés → migration Doctrine
 
 ### 7.6 — Sitemaps adresses (vague 2)
 

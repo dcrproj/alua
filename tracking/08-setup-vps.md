@@ -447,6 +447,44 @@ crontab -e
 
 ---
 
+## 13b. Tuning performance — anti-503 (une seule fois, en tant que debian)
+
+> Contexte : la fiche parcelle fait 11 appels API simultanés côté Next.js (ISR cold).
+> Les endpoints `/risques` (5 appels Géorisques en parallèle) et `/poi` (Overpass) bloquaient
+> des workers PHP-FPM 20-30s faute de timeout. Le défaut PHP-FPM (5 workers) s'épuisait en 1 requête.
+
+```bash
+# Sur le VPS en tant que debian (sudo)
+sudo bash /home/david/www/alua/scripts/tune-vps-root.sh
+```
+
+Le script :
+1. Passe `pm.max_children = 30` (était 5 par défaut — VPS 24 GB supporte 50+)
+2. Crée `/etc/nginx/conf.d/geocopia-cache.conf` avec la directive `fastcgi_cache_path`
+3. Affiche les directives à ajouter manuellement dans le vhost Nginx (`fastcgi_cache`, `fastcgi_cache_valid`, etc.)
+
+Après le script, ajouter dans le vhost Nginx (section `server`) et recharger :
+```nginx
+fastcgi_cache_key "$scheme$request_method$host$request_uri";
+
+# Dans location ~ \.php$ :
+fastcgi_cache          geocopia_api;
+fastcgi_cache_valid     200 1h;
+fastcgi_cache_valid     404 10m;
+fastcgi_cache_use_stale error timeout updating http_500 http_503;
+fastcgi_cache_background_update on;
+fastcgi_cache_lock      on;
+add_header X-Cache      $upstream_cache_status;
+```
+
+```bash
+nginx -t && systemctl reload nginx
+# Vérifier : curl -I https://geocopia.fr/api/parcelles/XXXXXX | grep X-Cache
+# HIT = servi par Nginx sans PHP, MISS = premier appel
+```
+
+---
+
 ## 13. Mises à jour récurrentes des données
 
 | Source | Commande | Fréquence | Stratégie |

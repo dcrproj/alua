@@ -139,12 +139,12 @@ class ParcelleDataController extends AbstractController
         $code   = $row['commune_code'];
         $latlon = "$lon,$lat";
 
-        // 5 requêtes en parallèle
-        $reqGasparAddr    = $this->http->request('GET', 'https://georisques.gouv.fr/api/v1/gaspar/risques', ['query' => ['latlon' => $latlon, 'rayon' => 500]]);
-        $reqGasparCommune = $this->http->request('GET', 'https://georisques.gouv.fr/api/v1/gaspar/risques', ['query' => ['code_insee' => $code]]);
-        $reqRadon         = $this->http->request('GET', 'https://georisques.gouv.fr/api/v1/radon',           ['query' => ['code_insee' => $code]]);
-        $reqSeisme        = $this->http->request('GET', 'https://georisques.gouv.fr/api/v1/zonage_sismique',  ['query' => ['code_insee' => $code]]);
-        $reqRga           = $this->http->request('GET', 'https://georisques.gouv.fr/api/v1/rga',             ['query' => ['latlon' => $latlon]]);
+        // 5 requêtes en parallèle — timeout agressif pour ne pas bloquer les workers FPM
+        $reqGasparAddr    = $this->http->request('GET', 'https://georisques.gouv.fr/api/v1/gaspar/risques', ['query' => ['latlon' => $latlon, 'rayon' => 500], 'timeout' => 5.0]);
+        $reqGasparCommune = $this->http->request('GET', 'https://georisques.gouv.fr/api/v1/gaspar/risques', ['query' => ['code_insee' => $code], 'timeout' => 5.0]);
+        $reqRadon         = $this->http->request('GET', 'https://georisques.gouv.fr/api/v1/radon',           ['query' => ['code_insee' => $code], 'timeout' => 5.0]);
+        $reqSeisme        = $this->http->request('GET', 'https://georisques.gouv.fr/api/v1/zonage_sismique',  ['query' => ['code_insee' => $code], 'timeout' => 5.0]);
+        $reqRga           = $this->http->request('GET', 'https://georisques.gouv.fr/api/v1/rga',             ['query' => ['latlon' => $latlon], 'timeout' => 5.0]);
 
         // Codes GASPAR : addr = filtré sur la commune de la parcelle, commune = tous
         $addrCodes    = $this->extractGasparCodes($reqGasparAddr, $code);
@@ -681,7 +681,7 @@ OQL;
             'method'  => 'POST',
             'content' => 'data=' . urlencode($query),
             'header'  => "Content-Type: application/x-www-form-urlencoded\r\nUser-Agent: alua/1.0\r\n",
-            'timeout' => 20,
+            'timeout' => 10,
         ]]);
         $resp = @file_get_contents('https://overpass-api.de/api/interpreter', false, $ctx);
         if (!$resp) return [];
