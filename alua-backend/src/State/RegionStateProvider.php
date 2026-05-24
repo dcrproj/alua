@@ -44,7 +44,7 @@ final class RegionStateProvider implements ProviderInterface
         $communeCodes = $this->communeCodesForRegion($code);
         if (empty($communeCodes)) {
             // Retourne les départements sans stats si pas de communes
-            $output->departements = $this->deptList($code, []);
+            $output->departements = $this->deptList($code);
             return $output;
         }
 
@@ -98,7 +98,7 @@ final class RegionStateProvider implements ProviderInterface
             'prixMedianM2' => $r['prix_median'] !== null ? round((float) $r['prix_median'], 0) : null,
         ], $evolRows);
 
-        $output->departements = $this->deptList($code, $communeCodes);
+        $output->departements = $this->deptList($code);
 
         return $output;
     }
@@ -113,42 +113,33 @@ final class RegionStateProvider implements ProviderInterface
         );
     }
 
-    /** Retourne les départements de la région avec prix médian par dept. */
-    private function deptList(string $regionCode, array $allCommuneCodes): array
+    /** Retourne les départements de la région avec prix médian (requête unique). */
+    private function deptList(string $regionCode): array
     {
-        $depts = $this->connection->fetchAllAssociative(
-            'SELECT code, nom, slug FROM departements WHERE code_region = :region ORDER BY nom',
+        $rows = $this->connection->fetchAllAssociative(
+            "SELECT d.code, d.nom, d.slug,
+                    PERCENTILE_CONT(0.5) WITHIN GROUP (
+                        ORDER BY m.valeur_fonciere / l.surface_reelle_bati
+                    ) AS prix_median
+             FROM departements d
+             LEFT JOIN communes c ON c.code_departement = d.code
+             LEFT JOIN mutations_dvf m ON m.code_commune = c.code_insee
+                 AND m.nature_mutation = 'Vente'
+                 AND m.valeur_fonciere > 0
+                 AND m.date_mutation >= NOW() - INTERVAL '10 years'
+             LEFT JOIN mutations_dvf_lots l ON l.mutation_dvf_id = m.id
+                 AND l.surface_reelle_bati > 0
+             WHERE d.code_region = :region
+             GROUP BY d.code, d.nom, d.slug
+             ORDER BY d.nom",
             ['region' => $regionCode]
         );
 
-        $result = [];
-        foreach ($depts as $d) {
-            $deptCodes = $this->connection->fetchFirstColumn(
-                'SELECT code_insee FROM communes WHERE code_departement = :code',
-                ['code' => $d['code']]
-            );
-            $prixMedian = null;
-            if (!empty($deptCodes)) {
-                $in  = implode(',', array_map(fn($c) => "'" . addslashes($c) . "'", $deptCodes));
-                $val = $this->connection->fetchOne(
-                    "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY m.valeur_fonciere / l.surface_reelle_bati)
-                     FROM mutations_dvf m
-                     JOIN mutations_dvf_lots l ON l.mutation_dvf_id = m.id
-                     WHERE m.code_commune IN ($in)
-                       AND l.surface_reelle_bati > 0
-                       AND m.valeur_fonciere > 0
-                       AND m.nature_mutation = 'Vente'
-                       AND m.date_mutation >= NOW() - INTERVAL '10 years'"
-                );
-                $prixMedian = ($val !== false && $val !== null) ? round((float) $val, 0) : null;
-            }
-            $result[] = [
-                'code'        => $d['code'],
-                'nom'         => $d['nom'],
-                'slug'        => $d['slug'],
-                'prixMedianM2'=> $prixMedian,
-            ];
-        }
-        return $result;
+        return array_map(fn(array $d) => [
+            'code'         => $d['code'],
+            'nom'          => $d['nom'],
+            'slug'         => $d['slug'],
+            'prixMedianM2' => ($d['prix_median'] !== null) ? round((float) $d['prix_median'], 0) : null,
+        ], $rows);
     }
 }

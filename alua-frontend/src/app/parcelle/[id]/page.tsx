@@ -414,6 +414,18 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
         {/* Breadcrumb row */}
         <div className="parcelle-breadcrumb">
           <Link href="/carte" className="hover:text-white/80 transition-colors">Carte</Link>
+          {commune?.slugRegion && commune.nomRegion && (
+            <>
+              <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
+              <Link href={`/region/${commune.slugRegion}`} className="hover:text-white/80 transition-colors">{commune.nomRegion}</Link>
+            </>
+          )}
+          {commune?.slugDepartement && commune.nomDepartement && (
+            <>
+              <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
+              <Link href={`/departement/${commune.slugDepartement}`} className="hover:text-white/80 transition-colors">{commune.nomDepartement}</Link>
+            </>
+          )}
           <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
           <Link href={`/commune/${communeSlug}`} className="hover:text-white/80 transition-colors">{communeLabel}</Link>
           <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>

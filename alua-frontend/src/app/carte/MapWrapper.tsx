@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 
@@ -19,10 +20,12 @@ export default function MapWrapper() {
   const zoom = params.get('zoom')
   const parcelleId = params.get('parcelle') ?? undefined
 
-  const initialFocus =
-    lat && lon
+  const initialFocus = useMemo(
+    () => lat && lon
       ? { lat: parseFloat(lat), lon: parseFloat(lon), zoom: zoom ? parseFloat(zoom) : 18, parcelleId }
-      : undefined
+      : undefined,
+    [lat, lon, zoom, parcelleId]
+  )
 
   return <MapView initialFocus={initialFocus} />
 }

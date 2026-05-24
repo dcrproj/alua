@@ -100,6 +100,7 @@ interface InitialFocus {
 export default function MapView({ initialFocus }: { initialFocus?: InitialFocus }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
+  const initialFocusRef = useRef(initialFocus)
   const [activeBase, setActiveBase] = useState<BaseMapId>('osm')
   const [visibleOverlays, setVisibleOverlays] = useState<Set<OverlayId>>(new Set(['admin', 'parcelles']))
   const [parcelle, setParcelle] = useState<Parcelle | null>(null)
@@ -351,17 +352,20 @@ export default function MapView({ initialFocus }: { initialFocus?: InitialFocus 
 
   useEffect(() => {
     const map = mapRef.current
-    if (!mapReady || !initialFocus || !map) return
-    map.flyTo({ center: [initialFocus.lon, initialFocus.lat], zoom: initialFocus.zoom, duration: 800 })
-    if (initialFocus.parcelleId) {
-      map.setFilter('parcelles-selected', ['==', ['get', 'id'], initialFocus.parcelleId])
+    if (!mapReady || !map) return
+    const focus = initialFocusRef.current
+    if (!focus) return
+    map.flyTo({ center: [focus.lon, focus.lat], zoom: focus.zoom, duration: 800 })
+    if (focus.parcelleId) {
+      map.setFilter('parcelles-selected', ['==', ['get', 'id'], focus.parcelleId])
       setLoading(true)
-      fetch(`${API_URL}/api/parcelles/${initialFocus.parcelleId}`, { headers: { Accept: 'application/ld+json' } })
+      fetch(`${API_URL}/api/parcelles/${focus.parcelleId}`, { headers: { Accept: 'application/ld+json' } })
         .then(r => r.ok ? r.json() : null)
         .then(data => { if (data) setParcelle(data) })
         .finally(() => setLoading(false))
     }
-  }, [mapReady, initialFocus])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady])
 
   const switchBase = useCallback((id: BaseMapId) => {
     const map = mapRef.current

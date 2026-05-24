@@ -27,12 +27,12 @@ final class CommuneStateProvider implements ProviderInterface
 
         // Résolution : slug d'abord, puis code_insee en fallback (rétrocompat liens existants)
         $communeRow = $this->connection->fetchAssociative(
-            'SELECT code_insee, nom, slug FROM communes WHERE slug = :slug',
+            'SELECT code_insee, nom, slug, code_departement FROM communes WHERE slug = :slug',
             ['slug' => $slug]
         );
         if (!$communeRow) {
             $communeRow = $this->connection->fetchAssociative(
-                'SELECT code_insee, nom, slug FROM communes WHERE code_insee = :code',
+                'SELECT code_insee, nom, slug, code_departement FROM communes WHERE code_insee = :code',
                 ['code' => $slug]
             );
         }
