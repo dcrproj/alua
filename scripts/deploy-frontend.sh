@@ -13,6 +13,7 @@ echo "[1/3] npm ci…"
 npm ci
 
 echo "[2/3] npm run build…"
+rm -rf .next
 npm run build
 
 echo "[3/3] PM2 restart…"
