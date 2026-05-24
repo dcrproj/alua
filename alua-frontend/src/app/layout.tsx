@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Syne, Inter, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const syne = Syne({
@@ -53,6 +54,12 @@ export default function RootLayout({
       lang="fr"
       className={`${syne.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
+      <Script
+        async
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4247463955296045"
+        crossOrigin="anonymous"
+        strategy="afterInteractive"
+      />
       <body className="h-full flex flex-col">{children}</body>
     </html>
   );

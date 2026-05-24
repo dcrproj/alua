@@ -314,7 +314,7 @@ php bin/console app:import:dpe
 → Le VPS-3 (200 GB NVMe) couvre les besoins avec **~100 GB de marge** pour la croissance.
 
 ### 6.2 — Déploiement applicatif
-- [ ] Soumettre le sitemap à Google Search Console
+- [x] Soumettre le sitemap à Google Search Console — `/sitemap.xml` index (1 communes + 161 parcelles batches) soumis le 24/05/2026
 - [x] Page mentions légales (`/mentions-legales`) — éditeur, hébergeur, RGPD, sources
 - [x] Déploiement frontend sur VPS (rsync + npm ci + npm run build)
 - [x] PM2 : `geocopia-front` port 3001, martin via systemd port 3000
@@ -325,7 +325,7 @@ php bin/console app:import:dpe
 - [x] CI/CD GitHub Actions (déploiement automatique sur push main) — `.github/workflows/deploy.yml`
 - [x] Script de déploiement Symfony (cache warmup, migrations auto) — `scripts/deploy-backend.sh`
 - [x] Script de déploiement Next.js (build + redémarrage PM2) — `scripts/deploy-frontend.sh`
-- [ ] Variables d'environnement de production sécurisées — voir ci-dessous
+- [x] Variables d'environnement de production sécurisées — `.env.local` créé sur VPS (APP_SECRET + DATABASE_URL)
 
 **GitHub Secrets à configurer** (`Settings → Secrets and variables → Actions`) :
 | Secret | Valeur |
