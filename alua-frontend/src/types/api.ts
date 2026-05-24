@@ -68,9 +68,43 @@ export interface CommuneTransaction {
   adresse: string | null
 }
 
+export interface Departement {
+  code: string
+  slug?: string | null
+  nom: string | null
+  codeRegion?: string | null
+  nomRegion?: string | null
+  slugRegion?: string | null
+  nbTransactions: number
+  prixMedianM2: number | null
+  nbDpes: number
+  distributionDpe: Record<string, number>
+  evolutionPrix: { annee: number; nbVentes: number; prixMedianM2: number | null }[]
+  communes: { codeInsee: string; nom: string; slug: string; population: number | null }[]
+}
+
+export interface Region {
+  code: string
+  slug?: string | null
+  nom: string | null
+  nbTransactions: number
+  prixMedianM2: number | null
+  nbDpes: number
+  distributionDpe: Record<string, number>
+  evolutionPrix: { annee: number; nbVentes: number; prixMedianM2: number | null }[]
+  departements: { code: string; nom: string; slug: string; prixMedianM2: number | null }[]
+}
+
 export interface Commune {
   code: string
+  slug?: string | null
   nom: string | null
+  codeDepartement?: string | null
+  nomDepartement?: string | null
+  slugDepartement?: string | null
+  codeRegion?: string | null
+  nomRegion?: string | null
+  slugRegion?: string | null
   nbParcelles: number
   nbTransactions: number
   prixMedianM2: number | null

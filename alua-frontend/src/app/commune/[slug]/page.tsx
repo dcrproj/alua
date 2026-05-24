@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import Link from 'next/link'
 import { Euro, Flame } from 'lucide-react'
 import type { Commune } from '@/types/api'
@@ -7,25 +7,26 @@ import GeocopiaHeader from '@/components/GeocopiaHeader'
 
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL!
 
-export async function generateMetadata({ params }: { params: Promise<{ code: string }> }) {
-  const { code } = await params
-  const res = await fetch(`${API_URL}/api/communes/${code}`, { headers: { Accept: 'application/ld+json' } })
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const res = await fetch(`${API_URL}/api/communes/${slug}`, { headers: { Accept: 'application/ld+json' } })
   if (!res.ok) return { title: 'Commune introuvable' }
   const c: Commune = await res.json()
-  const nom = c.nom ?? code
+  const canonicalSlug = c.slug ?? slug
+  const nom = c.nom ?? slug
   const title = `${nom} — Statistiques immobilières`
-  const description = `Prix médian${c.prixMedianM2 ? ` ${Math.round(c.prixMedianM2).toLocaleString('fr-FR')} €/m²` : ''}, ${c.nbTransactions.toLocaleString('fr-FR')} transactions DVF et ${c.nbDpes.toLocaleString('fr-FR')} DPE à ${nom} (${code}).`
+  const description = `Prix médian${c.prixMedianM2 ? ` ${Math.round(c.prixMedianM2).toLocaleString('fr-FR')} €/m²` : ''}, ${c.nbTransactions.toLocaleString('fr-FR')} transactions DVF et ${c.nbDpes.toLocaleString('fr-FR')} DPE à ${nom} (${c.code}).`
   return {
     title, description,
-    alternates: { canonical: `/commune/${code}` },
-    openGraph: { title, description, url: `/commune/${code}`, type: 'website' },
+    alternates: { canonical: `/commune/${canonicalSlug}` },
+    openGraph: { title, description, url: `/commune/${canonicalSlug}`, type: 'website' },
   }
 }
 
-export default async function CommunePage({ params }: { params: Promise<{ code: string }> }) {
-  const { code } = await params
+export default async function CommunePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
 
-  const res = await fetch(`${API_URL}/api/communes/${code}`, {
+  const res = await fetch(`${API_URL}/api/communes/${slug}`, {
     headers: { Accept: 'application/ld+json' },
     next: { revalidate: 3600 },
   })
@@ -33,25 +34,36 @@ export default async function CommunePage({ params }: { params: Promise<{ code: 
   const commune: Commune = await res.json()
   commune.transactions ??= []
   commune.transactionsTruncated ??= false
-  const nom = commune.nom ?? code
+
+  // Redirect ancien URL (code INSEE) vers l'URL canonique avec slug
+  if (commune.slug && commune.slug !== slug) {
+    permanentRedirect(`/commune/${commune.slug}`)
+  }
+
+  const canonicalSlug = commune.slug ?? slug
+  const nom = commune.nom ?? slug
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://geocopia.fr'
+  const breadcrumbItems = [
+    { name: 'Carte', item: `${siteUrl}/carte` },
+    ...(commune.slugRegion && commune.nomRegion ? [{ name: commune.nomRegion, item: `${siteUrl}/region/${commune.slugRegion}` }] : []),
+    ...(commune.slugDepartement && commune.nomDepartement ? [{ name: commune.nomDepartement, item: `${siteUrl}/departement/${commune.slugDepartement}` }] : []),
+    { name: nom, item: `${siteUrl}/commune/${canonicalSlug}` },
+  ]
+
   const jsonLd = [
     {
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Carte', item: `${siteUrl}/carte` },
-        { '@type': 'ListItem', position: 2, name: nom, item: `${siteUrl}/commune/${code}` },
-      ],
+      itemListElement: breadcrumbItems.map((b, i) => ({ '@type': 'ListItem', position: i + 1, name: b.name, item: b.item })),
     },
     {
       '@context': 'https://schema.org',
       '@type': 'City',
       name: nom,
-      identifier: code,
+      identifier: commune.code,
       description: `Données immobilières de ${nom} : ${commune.nbTransactions.toLocaleString('fr-FR')} transactions DVF${commune.prixMedianM2 ? `, prix médian ${Math.round(commune.prixMedianM2).toLocaleString('fr-FR')} €/m²` : ''}.`,
-      url: `${siteUrl}/commune/${code}`,
+      url: `${siteUrl}/commune/${canonicalSlug}`,
     },
   ]
 
@@ -117,6 +129,18 @@ export default async function CommunePage({ params }: { params: Promise<{ code: 
 
           <div className="parcelle-breadcrumb">
             <Link href="/carte" className="hover:text-white/80 transition-colors">Carte</Link>
+            {commune.slugRegion && commune.nomRegion && (
+              <>
+                <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
+                <Link href={`/region/${commune.slugRegion}`} className="hover:text-white/80 transition-colors">{commune.nomRegion}</Link>
+              </>
+            )}
+            {commune.slugDepartement && commune.nomDepartement && (
+              <>
+                <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
+                <Link href={`/departement/${commune.slugDepartement}`} className="hover:text-white/80 transition-colors">{commune.nomDepartement}</Link>
+              </>
+            )}
             <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
             <span style={{ color: 'rgba(255,255,255,0.9)' }}>{nom}</span>
           </div>
@@ -129,7 +153,7 @@ export default async function CommunePage({ params }: { params: Promise<{ code: 
                   Commune
                 </span>
                 <span className="w-6 h-px" style={{ background: 'var(--amber-500)' }} />
-                <span className="font-mono text-[13px]" style={{ color: 'rgba(255,255,255,0.65)' }}>{code}</span>
+                <span className="font-mono text-[13px]" style={{ color: 'rgba(255,255,255,0.65)' }}>{commune.code}</span>
               </div>
               <h1
                 className="text-[38px] font-semibold leading-tight text-white mb-3"

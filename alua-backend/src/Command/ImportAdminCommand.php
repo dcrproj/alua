@@ -156,6 +156,8 @@ class ImportAdminCommand extends Command
 
         $output->writeln('');
         $io->text(sprintf('  → %d communes importées.', $total));
+        $this->resolveSlugConflicts();
+        $io->text('  → Conflits de slugs résolus.');
     }
 
     private function insertCommuneBatch(array $batch): void
@@ -165,29 +167,48 @@ class ImportAdminCommand extends Command
 
         foreach ($batch as $i => $row) {
             $valueParts[] = sprintf(
-                "(:code_%d, :nom_%d, :dept_%d, :pop_%d, ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON(:geom_%d), 4326))::geometry(MultiPolygon,4326))",
-                $i, $i, $i, $i, $i
+                "(:code_%d, :nom_%d, :dept_%d, :pop_%d, ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON(:geom_%d), 4326))::geometry(MultiPolygon,4326), :slug_%d)",
+                $i, $i, $i, $i, $i, $i
             );
             $params["code_{$i}"] = $row['code_insee'];
             $params["nom_{$i}"]  = $row['nom'];
             $params["dept_{$i}"] = $row['code_departement'];
             $params["pop_{$i}"]  = $row['population'];
             $params["geom_{$i}"] = $row['geom'];
+            $params["slug_{$i}"] = $this->slugify($row['nom']) ?: $row['code_insee'];
         }
 
         $this->connection->executeStatement(
             sprintf(
-                "INSERT INTO communes (code_insee, nom, code_departement, population, geometry)
+                "INSERT INTO communes (code_insee, nom, code_departement, population, geometry, slug)
                  VALUES %s
                  ON CONFLICT (code_insee) DO UPDATE SET
                      nom = EXCLUDED.nom,
                      code_departement = EXCLUDED.code_departement,
                      population = EXCLUDED.population,
-                     geometry = EXCLUDED.geometry",
+                     geometry = EXCLUDED.geometry,
+                     slug = EXCLUDED.slug",
                 implode(', ', $valueParts)
             ),
             $params
         );
+    }
+
+    private function resolveSlugConflicts(): void
+    {
+        // Append code_insee to duplicates that arose from cross-department batching
+        $this->connection->executeStatement("
+            UPDATE communes c1
+            SET slug = c1.slug || '-' || c1.code_insee
+            WHERE (SELECT COUNT(*) FROM communes c2 WHERE c2.slug = c1.slug) > 1
+        ");
+    }
+
+    private function slugify(string $text): string
+    {
+        $slug = (string) transliterator_transliterate('Any-Latin; Latin-ASCII; Lower()', $text);
+        $slug = (string) preg_replace('/[^a-z0-9]+/', '-', $slug);
+        return trim($slug, '-');
     }
 
     private function fetchJson(string $path): array

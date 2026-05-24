@@ -393,25 +393,47 @@ DATABASE_URL="postgresql://alua:XXXXX@127.0.0.1:5432/alua?serverVersion=17&chars
 
 ## 13. Crontabs (utilisateur david)
 
+Créer le répertoire de logs avant d'installer le crontab :
+```bash
+mkdir -p ~/logs/geocopia
+```
+
 ```bash
 crontab -e
 ```
 
 ```cron
-# Refresh TTL : détecte les entités expirées et dispatche les jobs Messenger
-0 3 * * * cd /home/david/www/alua/alua-backend && php8.3 bin/console app:refresh:check >> /var/log/alua-refresh.log 2>&1
+# ── Messenger worker (DPE / RNIC / Sitadel / SIRENE TTL refresh) ─────────────
+# Tourne toutes les heures, se coupe au bout de 3300s pour éviter les fuites mémoire
+0 * * * * cd /home/david/www/alua/alua-backend && php8.3 bin/console messenger:consume async --time-limit=3300 >> /home/david/logs/geocopia/messenger.log 2>&1
 
-# Worker Messenger : traite les jobs de refresh (relancé toutes les heures)
-0 * * * * cd /home/david/www/alua/alua-backend && php8.3 bin/console messenger:consume async --time-limit=3300 >> /var/log/alua-messenger.log 2>&1
+# Dispatch des jobs Messenger (vérification TTL expirés) — quotidien à 3h
+0 3 * * * cd /home/david/www/alua/alua-backend && php8.3 bin/console app:refresh:check >> /home/david/logs/geocopia/refresh-check.log 2>&1
 
 # Vues matérialisées martin (DVF + DPE) — après le refresh:check
-30 3 * * * cd /home/david/www/alua/alua-backend && php8.3 bin/console app:tiles:refresh >> /var/log/alua-tiles.log 2>&1
+30 3 * * * cd /home/david/www/alua/alua-backend && php8.3 bin/console app:tiles:refresh >> /home/david/logs/geocopia/tiles-refresh.log 2>&1
+
+# ── Imports bulk (données source, fréquence basse) ────────────────────────────
+
+# BAN (adresses IGN) — ~75 jours (5×/an : janv, mi-mars, début juin, mi-août, début nov)
+0 2 15 1 * bash /home/david/www/alua/scripts/refresh-ban.sh
+0 2 20 3 * bash /home/david/www/alua/scripts/refresh-ban.sh
+0 2  4 6 * bash /home/david/www/alua/scripts/refresh-ban.sh
+0 2 19 8 * bash /home/david/www/alua/scripts/refresh-ban.sh
+0 2  3 11 * bash /home/david/www/alua/scripts/refresh-ban.sh
+
+# PCI/MBTiles (cadastre) — ~180 jours (2×/an : 15 janv + 15 juil), ~5h
+0 1 15 1 * bash /home/david/www/alua/scripts/refresh-pci.sh
+0 1 15 7 * bash /home/david/www/alua/scripts/refresh-pci.sh
+
+# DVF (transactions DGFiP) — 1×/an début juin (publication annuelle DGFiP)
+0 4 1 6 * bash /home/david/www/alua/scripts/refresh-dvf.sh
 
 # Monuments historiques ABF (Mérimée) — mensuel, idempotent
-0 4 1 * * cd /home/david/www/alua/alua-backend && php8.3 bin/console app:import:abf >> /var/log/alua-abf.log 2>&1
+0 5 1 * * cd /home/david/www/alua/alua-backend && php8.3 bin/console app:import:abf >> /home/david/logs/geocopia/abf.log 2>&1
 
-# BDNB — bâtiments — annuel (juin), nouveau millésime à ajuster manuellement
-# 0 2 15 6 * cd /home/david/www/alua/alua-backend && php8.3 bin/console app:import:bdnb --all >> /var/log/alua-bdnb.log 2>&1
+# BDNB — bâtiments — annuel (juin), idempotent
+0 2 15 6 * cd /home/david/www/alua/alua-backend && php8.3 bin/console app:import:bdnb --all >> /home/david/logs/geocopia/bdnb.log 2>&1
 
 # RNIC (copropriétés) : refresh géré par TTL Messenger (app:refresh:check ci-dessus, TTL 3 mois)
 # Pas de cron dédié nécessaire — premier import manuel : php8.3 bin/console app:import:rnic
@@ -431,7 +453,7 @@ crontab -e
 |--------|----------|-----------|-----------|
 | BAN | `app:import:ban --all` | ~75 jours | Cron |
 | PCI | `bash scripts/build-mbtiles-france.sh` | ~180 jours | Cron |
-| DVF | `bash scripts/import-dvf-france.sh` | 1×/an (mai) | Cron |
+| DVF | `bash scripts/refresh-dvf.sh` | 1×/an (juin) | Cron |
 | DPE | via Messenger (`app:refresh:check`) | 180 jours/dept | TTL Messenger |
 | Monuments historiques ABF | `app:import:abf` | Mensuel | Cron (1er du mois) |
 | BDNB bâtiments | `app:import:bdnb --all` | ~2×/an | Cron annuel (juin) |

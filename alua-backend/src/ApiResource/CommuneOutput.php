@@ -10,13 +10,20 @@ use App\State\CommuneStateProvider;
 
 #[ApiResource(
     operations: [new Get(provider: CommuneStateProvider::class)],
-    uriTemplate: '/communes/{code}',
+    uriTemplate: '/communes/{slug}',
     shortName: 'Commune',
 )]
 final class CommuneOutput
 {
     public string $code;
-    public ?string $nom = null;
+    public ?string $slug           = null;
+    public ?string $nom            = null;
+    public ?string $codeDepartement = null;
+    public ?string $nomDepartement  = null;
+    public ?string $slugDepartement = null;
+    public ?string $codeRegion      = null;
+    public ?string $nomRegion       = null;
+    public ?string $slugRegion      = null;
     public int $nbParcelles = 0;
     public int $nbTransactions = 0;
     public ?float $prixMedianM2 = null;

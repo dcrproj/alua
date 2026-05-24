@@ -19,9 +19,21 @@ class SitemapController extends AbstractController
     public function communes(): JsonResponse
     {
         $rows = $this->connection->fetchFirstColumn(
-            'SELECT code_insee FROM communes ORDER BY code_insee'
+            'SELECT slug FROM communes WHERE slug IS NOT NULL ORDER BY slug'
         );
         return $this->json($rows);
+    }
+
+    #[Route('/api/sitemap/admin', methods: ['GET'])]
+    public function admin(): JsonResponse
+    {
+        $departements = $this->connection->fetchFirstColumn(
+            'SELECT slug FROM departements WHERE slug IS NOT NULL ORDER BY slug'
+        );
+        $regions = $this->connection->fetchFirstColumn(
+            'SELECT slug FROM regions WHERE slug IS NOT NULL ORDER BY slug'
+        );
+        return $this->json(['departements' => $departements, 'regions' => $regions]);
     }
 
     #[Route('/api/sitemap/parcelles/count', methods: ['GET'])]

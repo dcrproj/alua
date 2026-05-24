@@ -18,7 +18,8 @@ Phase 3 — Enrichissement   ██████ Terminée
 Phase 4 — SEO & contenu    ██████ Terminée
 Phase 5 — Webdesign        ██████ Terminée
 Phase 6 — Mise en prod     ▓▓░░░░ En cours
-Phase 7 — API B2B          ░░░░░░ À venir
+Phase 7 — SEO croissance   ░░░░░░ À venir
+Phase 8 — API B2B          ░░░░░░ À venir
 ```
 
 **Périmètre géographique :** France métropolitaine (96 départements)
@@ -357,7 +358,9 @@ DATABASE_URL="postgresql://alua:<password>@127.0.0.1:5432/alua?serverVersion=17&
 - [x] Créer la boîte mail contact@geocopia.fr (Email Routing → dcrbernard@gmail.com)
 
 ### 6.4 — Publicité
-- [ ] Intégration Google AdSense
+- [x] Intégration Google AdSense — script `ca-pub-4247463955296045` dans `layout.tsx`, propriété validée
+- [x] CMP Google (consentement RGPD EEE) — message 2 choix configuré
+- [ ] Site en cours d'examen Google (1–7 jours) — attendre approbation avant de placer les encarts
 - [ ] Positionnement des encarts pub (sans dégrader le Core Web Vitals)
 
 ### 6.5 — Mises à jour récurrentes (post go-live)
@@ -372,31 +375,114 @@ directement sur le VPS selon les TTL.
 | DVF | `app:import:dvf --all` | 1×/an (publication DGFiP, généralement mai) |
 | DPE | `app:import:dpe` | selon TTL Phase 1.7 |
 
-- [ ] Configurer les cronjobs de refresh (voir Phase 1.7)
+- [x] Configurer les cronjobs de refresh (voir Phase 1.7) — `scripts/refresh-ban.sh`, `refresh-dvf.sh`, `refresh-pci.sh` + crontab dans `tracking/08-setup-vps.md §13`
 
 **Livrable :** site en ligne, déploiements automatisés, données France entière en base
 
 ---
 
-## Phase 7 — API B2B
+## Phase 7 — SEO Croissance
 
-### 7.1 — Conception API publique
+> Objectif : passer de l'indexation initiale (communes + parcelles) à une croissance organique
+> durable via les leviers techniques et éditoriaux identifiés dans `06-seo-strategie.md`.
+
+### 7.1 — URL slugs communes (priorité 1)
+
+> Actuellement `/commune/31000`, le doc stratégie prévoit `/commune/toulouse`.
+> Le slug dans l'URL est un signal SEO direct pour les requêtes "prix immobilier toulouse".
+
+- [x] Ajouter un champ `slug` sur la table `communes` — migration `Version20260525000000` (+ `departements`, `regions`)
+- [x] Générer les slugs à l'import (`app:import:admin` — translitération PHP intl + résolution conflits SQL)
+- [x] Mettre à jour les routes Next.js : `[code]` → `[slug]`
+- [x] Redirections 301 : `/commune/31000` → `/commune/toulouse` (via `permanentRedirect` dans le RSC)
+- [x] Mettre à jour le SitemapController (retourne les slugs)
+- [ ] Mettre à jour le maillage interne (InfoPanel, breadcrumbs, liens communes voisines)
+
+### 7.2 — Hiérarchie manquante : départements + régions
+
+> Ces pages sont des hubs d'autorité. Google remonte le jus de crawl vers les fiches
+> communes et parcelles. Actuellement absentes du site.
+
+- [x] Fiche département (`/departement/haute-garonne`) : stats agrégées DVF, nb communes, carte
+- [x] Fiche région (`/region/occitanie`) : idem + liste des départements
+- [x] Breadcrumb mis à jour : Région > Département > Commune (JSON-LD + visuel)
+- [x] Ajouter fiche département + région au sitemap (`sitemap/admin.xml`)
+- [x] Schema.org `AdministrativeArea` sur ces pages
+
+### 7.3 — Maillage interne (priorité 2)
+
+> Chaque page doit pointer vers ses voisines. Actuellement le maillage commune ↔ parcelle
+> existe, mais les liens horizontaux (communes voisines, autres adresses de la même rue) manquent.
+
+- [ ] Communes voisines sur la fiche commune (5 communes limitrophes, via PostGIS ST_DWithin)
+- [ ] Page rue (`/commune/toulouse/rue/rue-de-la-paix`) : liste des adresses, dernières transactions
+- [ ] "Autres adresses au même numéro de rue" sur la fiche adresse
+- [ ] "Parcelles adjacentes" sur la fiche parcelle (ST_Touches)
+- [ ] Footer commune sur fiche adresse et parcelle (lien vers la fiche commune parente)
+
+### 7.4 — Enrichissement Schema.org
+
+> Les rich snippets améliorent le CTR dans les SERPs. Les transactions DVF sont des données
+> structurées parfaites pour `RealEstateListing`.
+
+- [ ] `RealEstateListing` + `Offer` pour chaque transaction DVF sur les fiches (prix, date, surface)
+- [ ] `GeoCoordinates` sur les fiches adresse et parcelle (lat/lng depuis PostGIS)
+- [ ] `FAQPage` sur les fiches commune (ex: "Quel est le prix moyen au m² à Toulouse ?")
+- [ ] `Dataset` en JSON-LD sur la page d'accueil (référence les sources ouvertes utilisées)
+
+### 7.5 — Performance Core Web Vitals
+
+> TTFB trop lent sur les fiches à froid = risque Core Web Vitals = pénalité ranking.
+> Noté en mémoire projet depuis Phase 6.2.
+
+- [ ] `generateStaticParams` sur les 2 000 communes les plus peuplées (pré-rendu ISR)
+- [ ] Script de warm-up post-deploy : GET sur les 500 fiches les plus consultées
+- [ ] `EXPLAIN ANALYZE` sur les requêtes PostGIS lentes (fiche parcelle : ST_DWithin KNN)
+- [ ] Index PostGIS manquants identifiés → migration Doctrine
+
+### 7.6 — Sitemaps adresses (vague 2)
+
+> 25M d'URLs d'adresses non soumises. Crawl budget à ménager : soumettre par vague,
+> grandes villes d'abord (trafic longue traîne le plus fort).
+
+- [ ] SitemapController : endpoint `/api/sitemap/adresses/{dept}` (adresses par département)
+- [ ] Route Next.js `sitemap/adresses-{dept}.xml` (même pattern que parcelles)
+- [ ] Vague 2 : soumettre les 10 départements les plus peuplés (75, 69, 13, 33, 31…)
+- [ ] Vague 3 : soumettre le reste progressivement (1 dept/semaine via cron)
+
+### 7.7 — Contenu éditorial (longue traîne + backlinks)
+
+> Les fiches programmatiques captent la longue traîne transactionnelle.
+> Le contenu éditorial capte les requêtes informationnelles et génère des backlinks.
+
+- [ ] Page `/guides/lire-un-dpe` : explication étiquettes A–G, impact sur le prix
+- [ ] Page `/guides/comprendre-le-cadastre` : qu'est-ce qu'une parcelle, comment la trouver
+- [ ] Page `/guides/dvf-transactions` : comment interpréter les données de vente
+- [ ] Référencement sur `data.gouv.fr` (réutilisateurs des données BAN/DVF/DPE)
+- [ ] Page `/open-data` : crédits sources + liens retour vers data.gouv.fr (backlinks institutionnels)
+
+---
+
+## Phase 8 — API B2B
+
+### 8.1 — Conception API publique
 - [ ] Définir le périmètre de l'API (endpoints, niveaux d'accès, quotas)
 - [ ] Authentification par clé API (header `X-Api-Key`)
 - [ ] Rate limiting par clé (ex. 1 000 req/jour gratuit, paliers payants)
 
-### 7.2 — Documentation et portail développeur
+### 8.2 — Documentation et portail développeur
 - [ ] Documentation OpenAPI / Swagger auto-générée
 - [ ] Page `/developers` avec exemples d'intégration
 - [ ] Portail self-service : création de compte, génération de clé, suivi quota
 
-### 7.3 — Monétisation API
+### 8.3 — Monétisation API
 - [ ] Intégration Stripe (abonnements mensuels par palier)
 - [ ] Webhooks Stripe → activation/désactivation clés
 - [ ] Dashboard client (consommation, factures)
 
-### 7.4 — Distribution
+### 8.4 — Distribution
 - [ ] Référencement sur api.gouv.fr (données immobilières)
 - [ ] Partenariats ciblés (notaires, agents immobiliers, banques, proptech)
 
 **Livrable :** API B2B documentée, monétisée et accessible en self-service
+

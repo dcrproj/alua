@@ -20,20 +20,53 @@ final class CommuneStateProvider implements ProviderInterface
 
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): ?CommuneOutput
     {
-        $code = $uriVariables['code'] ?? null;
-        if (!$code) {
+        $slug = $uriVariables['slug'] ?? null;
+        if (!$slug) {
             return null;
         }
 
-        // Vérifier que la commune existe (via une mutation ou une parcelle)
-        $nom = $this->connection->fetchOne(
-            'SELECT nom_commune FROM mutations_dvf WHERE code_commune = :code LIMIT 1',
-            ['code' => $code]
+        // Résolution : slug d'abord, puis code_insee en fallback (rétrocompat liens existants)
+        $communeRow = $this->connection->fetchAssociative(
+            'SELECT code_insee, nom, slug FROM communes WHERE slug = :slug',
+            ['slug' => $slug]
         );
+        if (!$communeRow) {
+            $communeRow = $this->connection->fetchAssociative(
+                'SELECT code_insee, nom, slug FROM communes WHERE code_insee = :code',
+                ['code' => $slug]
+            );
+        }
+
+        if (!$communeRow) {
+            return null;
+        }
+
+        $code = $communeRow['code_insee'];
+        $nom  = $communeRow['nom'];
+
+        // Département + région pour breadcrumb et maillage
+        $deptRow = null;
+        if (!empty($communeRow['code_departement'])) {
+            $deptRow = $this->connection->fetchAssociative(
+                'SELECT d.code, d.nom, d.slug, d.code_region,
+                        r.nom AS nom_region, r.slug AS slug_region
+                 FROM departements d
+                 LEFT JOIN regions r ON r.code = d.code_region
+                 WHERE d.code = :code',
+                ['code' => $communeRow['code_departement']]
+            );
+        }
 
         $output = new CommuneOutput();
         $output->code = $code;
-        $output->nom  = $nom ?: null;
+        $output->slug = $communeRow['slug'];
+        $output->nom  = $nom;
+        $output->codeDepartement = $communeRow['code_departement'] ?? null;
+        $output->nomDepartement  = $deptRow['nom']        ?? null;
+        $output->slugDepartement = $deptRow['slug']       ?? null;
+        $output->codeRegion      = $deptRow['code_region'] ?? null;
+        $output->nomRegion       = $deptRow['nom_region']  ?? null;
+        $output->slugRegion      = $deptRow['slug_region'] ?? null;
 
         $output->nbParcelles    = (int) $this->connection->fetchOne(
             'SELECT COUNT(*) FROM parcelles WHERE commune_code = :code',

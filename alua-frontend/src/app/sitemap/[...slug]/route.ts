@@ -44,5 +44,21 @@ ${ids.map(id => `  <url><loc>${SITE_URL}/parcelle/${id}</loc><changefreq>yearly<
     }
   }
 
+  if (name === 'admin.xml') {
+    try {
+      const res = await fetch(`${API_URL}/api/sitemap/admin`)
+      if (!res.ok) throw new Error()
+      const { departements, regions } = await res.json() as { departements: string[]; regions: string[] }
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${departements.map(s => `  <url><loc>${SITE_URL}/departement/${s}</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>`).join('\n')}
+${regions.map(s => `  <url><loc>${SITE_URL}/region/${s}</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>`).join('\n')}
+</urlset>`
+      return new NextResponse(xml, { headers: { 'Content-Type': 'application/xml; charset=utf-8' } })
+    } catch {
+      return new NextResponse('error', { status: 500 })
+    }
+  }
+
   return new NextResponse('Not found', { status: 404 })
 }

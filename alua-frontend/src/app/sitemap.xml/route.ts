@@ -6,7 +6,10 @@ const API_URL  = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL!
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://geocopia.fr'
 
 export async function GET() {
-  const urls: string[] = [`${SITE_URL}/sitemap/communes.xml`]
+  const urls: string[] = [
+    `${SITE_URL}/sitemap/communes.xml`,
+    `${SITE_URL}/sitemap/admin.xml`,
+  ]
 
   try {
     const res = await fetch(`${API_URL}/api/sitemap/parcelles/count`)
