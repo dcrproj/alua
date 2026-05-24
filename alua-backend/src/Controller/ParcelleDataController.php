@@ -614,4 +614,160 @@ class ParcelleDataController extends AbstractController
         }
         return 'Pas de risque connu';
     }
+
+    // ── POI (Overpass / OpenStreetMap) ───────────────────────────────────────
+
+    #[Route('/api/parcelles/{idParcelle}/poi', methods: ['GET'])]
+    public function poi(string $idParcelle): JsonResponse
+    {
+        // Cache hit (TTL 90 jours)
+        $cached = $this->connection->fetchAssociative(
+            "SELECT data, fetched_at FROM poi_cache
+             WHERE id_parcelle = :id AND fetched_at > NOW() - INTERVAL '90 days'",
+            ['id' => $idParcelle]
+        );
+        if ($cached) {
+            return $this->json([
+                'categories' => json_decode($cached['data'], true),
+                'fetchedAt'  => $cached['fetched_at'],
+            ]);
+        }
+
+        $centroid = $this->connection->fetchAssociative(
+            'SELECT ST_Y(centroid) AS lat, ST_X(centroid) AS lon FROM parcelles WHERE id_parcelle = :id',
+            ['id' => $idParcelle]
+        );
+        if (!$centroid || $centroid['lat'] === null) {
+            return $this->json(['categories' => [], 'fetchedAt' => null]);
+        }
+
+        $categories = $this->fetchOverpassPoi((float) $centroid['lat'], (float) $centroid['lon']);
+
+        $this->connection->executeStatement(
+            'INSERT INTO poi_cache (id_parcelle, data, fetched_at)
+             VALUES (:id, :data, NOW())
+             ON CONFLICT (id_parcelle) DO UPDATE SET data = EXCLUDED.data, fetched_at = NOW()',
+            ['id' => $idParcelle, 'data' => json_encode($categories)]
+        );
+
+        return $this->json([
+            'categories' => $categories,
+            'fetchedAt'  => (new \DateTimeImmutable())->format('c'),
+        ]);
+    }
+
+    private function fetchOverpassPoi(float $lat, float $lon): array
+    {
+        $c = "$lat,$lon";
+        $query = <<<OQL
+[out:json][timeout:15];
+(
+  node["highway"="bus_stop"](around:600,$c);
+  node["amenity"="bus_station"](around:800,$c);
+  node["railway"~"^(station|halt|tram_stop|subway_entrance)$"](around:1000,$c);
+  node["amenity"~"^(school|kindergarten)$"](around:1000,$c);
+  node["amenity"~"^(university|college)$"](around:1500,$c);
+  node["amenity"~"^(hospital|clinic|pharmacy|doctors)$"](around:1000,$c);
+  node["shop"~"^(supermarket|convenience|bakery)$"](around:500,$c);
+  node["amenity"="bank"](around:400,$c);
+  node["leisure"~"^(park|sports_centre|fitness_centre|swimming_pool)$"](around:800,$c);
+  way["leisure"="park"](around:800,$c);
+  node["amenity"~"^(cinema|theatre)$"](around:1000,$c);
+);
+out center body;
+OQL;
+
+        $ctx  = stream_context_create(['http' => [
+            'method'  => 'POST',
+            'content' => 'data=' . urlencode($query),
+            'header'  => "Content-Type: application/x-www-form-urlencoded\r\nUser-Agent: alua/1.0\r\n",
+            'timeout' => 20,
+        ]]);
+        $resp = @file_get_contents('https://overpass-api.de/api/interpreter', false, $ctx);
+        if (!$resp) return [];
+
+        $data = json_decode($resp, true);
+        if (!isset($data['elements'])) return [];
+
+        return $this->categorizePoiElements($data['elements'], $lat, $lon);
+    }
+
+    private function categorizePoiElements(array $elements, float $refLat, float $refLon): array
+    {
+        $cats = [
+            'transport' => ['label' => 'Transports',      'items' => []],
+            'education' => ['label' => 'Éducation',        'items' => []],
+            'sante'     => ['label' => 'Santé',            'items' => []],
+            'commerce'  => ['label' => 'Commerces',        'items' => []],
+            'loisirs'   => ['label' => 'Loisirs & Sport',  'items' => []],
+        ];
+
+        foreach ($elements as $el) {
+            $tags  = $el['tags'] ?? [];
+            $elLat = (float) ($el['lat'] ?? $el['center']['lat'] ?? 0);
+            $elLon = (float) ($el['lon'] ?? $el['center']['lon'] ?? 0);
+            if (!$elLat) continue;
+
+            [$cat, $type] = $this->classifyPoiTags($tags);
+            if (!$cat) continue;
+
+            $distM = (int) round(sqrt(
+                pow(($refLat - $elLat) * 111320, 2) +
+                pow(($refLon - $elLon) * 111320 * cos(deg2rad($refLat)), 2)
+            ));
+
+            $cats[$cat]['items'][] = [
+                'name'  => isset($tags['name']) ? mb_substr($tags['name'], 0, 80) : null,
+                'type'  => $type,
+                'distM' => $distM,
+            ];
+        }
+
+        foreach ($cats as &$cat) {
+            usort($cat['items'], fn($a, $b) => $a['distM'] <=> $b['distM']);
+            $cat['items'] = array_slice($cat['items'], 0, 5);
+        }
+
+        return array_values(array_filter($cats, fn($c) => !empty($c['items'])));
+    }
+
+    private function classifyPoiTags(array $tags): array
+    {
+        $amenity = $tags['amenity'] ?? null;
+        $highway = $tags['highway'] ?? null;
+        $railway = $tags['railway'] ?? null;
+        $shop    = $tags['shop']    ?? null;
+        $leisure = $tags['leisure'] ?? null;
+
+        if ($highway === 'bus_stop')            return ['transport', 'Bus'];
+        if ($amenity === 'bus_station')         return ['transport', 'Bus'];
+        if ($railway === 'station')             return ['transport', 'Gare'];
+        if ($railway === 'halt')                return ['transport', 'Halte ferroviaire'];
+        if ($railway === 'tram_stop')           return ['transport', 'Tramway'];
+        if ($railway === 'subway_entrance')     return ['transport', 'Métro'];
+
+        if ($amenity === 'kindergarten')        return ['education', 'Maternelle'];
+        if ($amenity === 'school')              return ['education', 'École'];
+        if ($amenity === 'college')             return ['education', 'Collège/Lycée'];
+        if ($amenity === 'university')          return ['education', 'Université'];
+
+        if ($amenity === 'hospital')            return ['sante', 'Hôpital'];
+        if ($amenity === 'clinic')              return ['sante', 'Clinique'];
+        if ($amenity === 'pharmacy')            return ['sante', 'Pharmacie'];
+        if ($amenity === 'doctors')             return ['sante', 'Médecin'];
+
+        if ($shop === 'supermarket')            return ['commerce', 'Supermarché'];
+        if ($shop === 'convenience')            return ['commerce', 'Épicerie'];
+        if ($shop === 'bakery')                 return ['commerce', 'Boulangerie'];
+        if ($amenity === 'bank')                return ['commerce', 'Banque'];
+
+        if ($leisure === 'park')                return ['loisirs', 'Parc'];
+        if ($leisure === 'sports_centre')       return ['loisirs', 'Centre sportif'];
+        if ($leisure === 'fitness_centre')      return ['loisirs', 'Salle de sport'];
+        if ($leisure === 'swimming_pool')       return ['loisirs', 'Piscine'];
+        if ($amenity === 'cinema')              return ['loisirs', 'Cinéma'];
+        if ($amenity === 'theatre')             return ['loisirs', 'Théâtre'];
+
+        return [null, null];
+    }
 }

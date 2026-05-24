@@ -1,10 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { Layers, ChevronDown, ChevronUp } from 'lucide-react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import Link from 'next/link'
 import InfoPanel from './InfoPanel'
-import SearchBar, { type BanFeature } from '@/components/SearchBar'
+import GeocopiaHeader from '@/components/GeocopiaHeader'
+import type { BanFeature } from '@/components/SearchBar'
 import type { Parcelle } from '@/types/api'
 
 const MARTIN_URL = process.env.NEXT_PUBLIC_MARTIN_URL!
@@ -72,8 +75,8 @@ function adminFillColor(deptProp: string, opacity: number): maplibregl.Expressio
   return [
     'case',
     ['in', ['get', deptProp], ['literal', ALSACE_MOSELLE]],
-    `rgba(160,160,160,${opacity + 0.05})`,
-    `rgba(99,131,230,${opacity})`,
+    `rgba(148,163,184,${opacity + 0.05})`,
+    `rgba(245,158,11,${opacity})`,
   ]
 }
 
@@ -81,35 +84,28 @@ function adminLineColor(deptProp: string): maplibregl.ExpressionSpecification {
   return [
     'case',
     ['in', ['get', deptProp], ['literal', ALSACE_MOSELLE]],
-    'rgba(100,100,100,0.7)',
-    'rgba(59,100,210,0.7)',
+    'rgba(148,163,184,0.7)',
+    'rgba(180,83,9,0.65)',
   ]
 }
 
-// Calcule le centre d'une géométrie GeoJSON
-function geomCenter(geom: GeoJSON.Geometry): [number, number] {
-  let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity
-  const scanRing = (ring: number[][]) => {
-    ring.forEach(([lng, lat]) => {
-      if (lng < minLng) minLng = lng
-      if (lat < minLat) minLat = lat
-      if (lng > maxLng) maxLng = lng
-      if (lat > maxLat) maxLat = lat
-    })
-  }
-  const scanPoly = (poly: number[][][]) => poly.forEach(scanRing)
-  if (geom.type === 'Polygon') scanPoly(geom.coordinates)
-  else if (geom.type === 'MultiPolygon') geom.coordinates.forEach(scanPoly)
-  return [(minLng + maxLng) / 2, (minLat + maxLat) / 2]
+
+interface InitialFocus {
+  lat: number
+  lon: number
+  zoom: number
+  parcelleId?: string
 }
 
-export default function MapView() {
+export default function MapView({ initialFocus }: { initialFocus?: InitialFocus }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const [activeBase, setActiveBase] = useState<BaseMapId>('osm')
   const [visibleOverlays, setVisibleOverlays] = useState<Set<OverlayId>>(new Set(['admin', 'parcelles']))
   const [parcelle, setParcelle] = useState<Parcelle | null>(null)
   const [loading, setLoading] = useState(false)
+  const [layersOpen, setLayersOpen] = useState(true)
+  const [mapReady, setMapReady] = useState(false)
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -175,7 +171,7 @@ export default function MapView() {
         source: 'admin-regions',
         'source-layer': 'regions',
         minzoom: 4, maxzoom: 7,
-        paint: { 'fill-color': 'rgba(99,131,230,0.22)', 'fill-outline-color': 'rgba(59,100,210,0.7)' },
+        paint: { 'fill-color': 'rgba(245,158,11,0.15)', 'fill-outline-color': 'rgba(180,83,9,0.6)' },
       },
       // Régions — contour (plus épais)
       {
@@ -184,7 +180,7 @@ export default function MapView() {
         source: 'admin-regions',
         'source-layer': 'regions',
         minzoom: 4, maxzoom: 8,
-        paint: { 'line-color': 'rgba(59,100,210,0.8)', 'line-width': 2 },
+        paint: { 'line-color': 'rgba(180,83,9,0.75)', 'line-width': 2 },
       },
 
       // Départements — fill (zoom 7–10)
@@ -279,8 +275,8 @@ export default function MapView() {
         'source-layer': 'parcelles',
         minzoom: 15,
         paint: {
-          'fill-color': 'rgba(59, 130, 246, 0.45)',
-          'fill-outline-color': '#1d4ed8',
+          'fill-color': 'rgba(245,158,11,0.45)',
+          'fill-outline-color': '#d97706',
         },
         filter: ['==', ['get', 'id'], ''] as maplibregl.FilterSpecification,
       },
@@ -298,33 +294,33 @@ export default function MapView() {
     map.addControl(new maplibregl.NavigationControl(), 'top-right')
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right')
 
-    // Drill-down : clic région → zoom 8 (départements visibles à minzoom 7)
+    // Drill-down : clic région → zoom 8
     map.on('click', 'regions-fill', (e) => {
-      const geom = e.features?.[0]?.geometry
-      if (!geom) return
-      map.flyTo({ center: geomCenter(geom as GeoJSON.Geometry), zoom: 8 })
+      map.flyTo({ center: e.lngLat, zoom: 8 })
     })
 
-    // Drill-down : clic département → zoom 11 (communes visibles à minzoom 10)
+    // Drill-down : clic département → zoom 11
     map.on('click', 'departements-fill', (e) => {
-      const geom = e.features?.[0]?.geometry
-      if (!geom) return
-      map.flyTo({ center: geomCenter(geom as GeoJSON.Geometry), zoom: 11 })
+      map.flyTo({ center: e.lngLat, zoom: 11 })
     })
 
-    // Drill-down : clic commune → zoom 16 (parcelles visibles à minzoom 15)
+    // Drill-down : clic commune → zoom 16
     map.on('click', 'communes-fill', (e) => {
-      const geom = e.features?.[0]?.geometry
-      if (!geom) return
-      map.flyTo({ center: geomCenter(geom as GeoJSON.Geometry), zoom: 16 })
+      map.flyTo({ center: e.lngLat, zoom: 16 })
     })
 
-    // Clic parcelle → InfoPanel
+    // Clic parcelle → InfoPanel + mise à jour URL
     map.on('click', 'parcelles-fill', async (e) => {
       const feature = e.features?.[0]
       const parcelleId = feature?.properties?.id as string | undefined
       if (!parcelleId) return
       map.setFilter('parcelles-selected', ['==', ['get', 'id'], parcelleId])
+      const url = new URL(window.location.href)
+      url.searchParams.set('lat', e.lngLat.lat.toFixed(6))
+      url.searchParams.set('lon', e.lngLat.lng.toFixed(6))
+      url.searchParams.set('zoom', String(Math.round(map.getZoom())))
+      url.searchParams.set('parcelle', parcelleId)
+      window.history.replaceState(null, '', url.toString())
       setLoading(true)
       setParcelle(null)
       try {
@@ -347,9 +343,25 @@ export default function MapView() {
       map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = '' })
     })
 
+    map.once('load', () => setMapReady(true))
+
     mapRef.current = map
     return () => { map.remove(); mapRef.current = null }
   }, [])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!mapReady || !initialFocus || !map) return
+    map.flyTo({ center: [initialFocus.lon, initialFocus.lat], zoom: initialFocus.zoom, duration: 800 })
+    if (initialFocus.parcelleId) {
+      map.setFilter('parcelles-selected', ['==', ['get', 'id'], initialFocus.parcelleId])
+      setLoading(true)
+      fetch(`${API_URL}/api/parcelles/${initialFocus.parcelleId}`, { headers: { Accept: 'application/ld+json' } })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setParcelle(data) })
+        .finally(() => setLoading(false))
+    }
+  }, [mapReady, initialFocus])
 
   const switchBase = useCallback((id: BaseMapId) => {
     const map = mapRef.current
@@ -393,92 +405,172 @@ export default function MapView() {
   }, [])
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={containerRef} className="w-full h-full" />
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
 
-      {/* Barre de recherche centrée en haut */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-80 sm:w-96">
-        <SearchBar onSelect={handleSearchSelect} />
-      </div>
+      {/* ── App Header ────────────────────────────────────────────── */}
+      <GeocopiaHeader onSearchSelect={handleSearchSelect} activeRoute="carte" />
 
-      {/* Contrôles en haut à gauche */}
-      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-        {/* Fond de carte */}
-        <div className="flex gap-1 bg-white/90 backdrop-blur-sm rounded-lg p-1 shadow-md">
-          {BASE_MAP_IDS.map((id) => (
-            <button
-              key={id}
-              onClick={() => switchBase(id)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                activeBase === id ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              {BASE_MAPS[id].label}
-            </button>
-          ))}
-        </div>
+      {/* ── Map area ──────────────────────────────────────────────── */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
-        {/* Couches */}
-        <div className="bg-white/90 backdrop-blur-sm rounded-lg p-2 shadow-md flex flex-col gap-1">
-          {(Object.keys(OVERLAYS) as OverlayId[]).map((id) => (
-            <label key={id} className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={visibleOverlays.has(id)}
-                onChange={() => toggleOverlay(id)}
-                className="rounded"
-              />
-              <span className="text-xs font-medium text-foreground">{OVERLAYS[id].label}</span>
-              {OVERLAYS[id].minZoomHint && visibleOverlays.has(id) && (
-                <span className="text-xs text-muted-foreground/60">zoom {OVERLAYS[id].minZoomHint}+</span>
-              )}
-            </label>
-          ))}
-        </div>
-      </div>
+        {/* Layer switcher — top-left */}
+        <div style={{
+          position: 'absolute', top: 16, left: 16, zIndex: 3,
+          background: 'white', border: '1px solid var(--slate-200)',
+          borderRadius: 6, width: 220,
+          boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+        }}>
+          <button
+            onClick={() => setLayersOpen(o => !o)}
+            style={{
+              width: '100%', padding: '10px 12px',
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: 'transparent', border: 0,
+              color: 'var(--slate-900)', fontWeight: 600, fontSize: 13,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            <Layers size={14} style={{ color: 'var(--slate-500)', flexShrink: 0 }} />
+            <span style={{ flex: 1, textAlign: 'left' }}>Couches</span>
+            {layersOpen ? <ChevronUp size={14} style={{ color: 'var(--slate-400)' }} /> : <ChevronDown size={14} style={{ color: 'var(--slate-400)' }} />}
+          </button>
 
-      {/* Légende DVF */}
-      {visibleOverlays.has('dvf') && (
-        <div className="absolute bottom-10 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg p-2 shadow-md">
-          <p className="text-xs font-medium mb-1">Prix/m² (DVF)</p>
-          <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-            {[
-              { color: '#4ade80', label: '< 2 000 €' },
-              { color: '#86efac', label: '2 000 – 3 500 €' },
-              { color: '#fde047', label: '3 500 – 5 500 €' },
-              { color: '#fb923c', label: '5 500 – 8 000 €' },
-              { color: '#ef4444', label: '8 000 – 12 000 €' },
-              { color: '#9333ea', label: '> 12 000 €' },
-              { color: '#aaaaaa', label: 'Inconnu' },
-            ].map(({ color, label }) => (
-              <div key={label} className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full inline-block shrink-0" style={{ backgroundColor: color }} />
-                {label}
+          {layersOpen && (
+            <>
+              <div style={{ height: 1, background: 'var(--slate-200)' }} />
+
+              {/* Base maps */}
+              <div style={{ padding: '8px 8px 6px' }}>
+                <div style={{
+                  fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
+                  textTransform: 'uppercase', color: 'var(--slate-500)',
+                  padding: '0 4px 6px',
+                }}>Fond</div>
+                <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  {BASE_MAP_IDS.map((id) => (
+                    <button
+                      key={id}
+                      onClick={() => switchBase(id)}
+                      style={{
+                        padding: '3px 8px', borderRadius: 4, fontSize: 12, fontWeight: 500,
+                        border: '1px solid transparent',
+                        background: activeBase === id ? 'var(--slate-900)' : 'var(--slate-50)',
+                        color: activeBase === id ? 'white' : 'var(--slate-600)',
+                        cursor: 'pointer', fontFamily: 'inherit',
+                        borderColor: activeBase === id ? 'var(--slate-900)' : 'var(--slate-200)',
+                      }}
+                    >
+                      {BASE_MAPS[id].label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* Légende DPE */}
-      {visibleOverlays.has('dpe') && (
-        <div className="absolute bottom-10 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg p-2 shadow-md">
-          <p className="text-xs font-medium mb-1">Étiquette DPE</p>
-          <div className="flex gap-1">
-            {(['A','B','C','D','E','F','G'] as const).map((l) => (
-              <span
-                key={l}
-                className="w-5 h-5 rounded text-white text-xs font-bold flex items-center justify-center"
-                style={{ backgroundColor: { A:'#319834',B:'#33CC33',C:'#CACC32',D:'#FBCA01',E:'#FB9A00',F:'#FB6A01',G:'#E9161C' }[l] }}
-              >{l}</span>
-            ))}
-          </div>
-        </div>
-      )}
+              <div style={{ height: 1, background: 'var(--slate-100)', margin: '0 8px' }} />
 
-      {(parcelle || loading) && (
-        <InfoPanel parcelle={parcelle} loading={loading} onClose={closePanel} />
-      )}
+              {/* Overlay toggles */}
+              <div style={{ padding: '6px 4px 8px' }}>
+                <div style={{
+                  fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
+                  textTransform: 'uppercase', color: 'var(--slate-500)',
+                  padding: '0 8px 6px',
+                }}>Données</div>
+                {(Object.keys(OVERLAYS) as OverlayId[]).map((id) => (
+                  <label key={id} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '7px 8px', fontSize: 13,
+                    color: 'var(--slate-700)', cursor: 'pointer',
+                    borderRadius: 4,
+                    background: visibleOverlays.has(id) ? 'var(--slate-50)' : 'transparent',
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={visibleOverlays.has(id)}
+                      onChange={() => toggleOverlay(id)}
+                      style={{ accentColor: 'var(--slate-900)', cursor: 'pointer' }}
+                    />
+                    <span style={{ flex: 1 }}>{OVERLAYS[id].label}</span>
+                    {OVERLAYS[id].minZoomHint && visibleOverlays.has(id) && (
+                      <span style={{ fontSize: 11, color: 'var(--slate-400)', fontFamily: 'var(--font-mono)' }}>
+                        {OVERLAYS[id].minZoomHint}+
+                      </span>
+                    )}
+                  </label>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Légende DVF */}
+        {visibleOverlays.has('dvf') && (
+          <div style={{
+            position: 'absolute', bottom: 10, left: 16, zIndex: 3,
+            background: 'white', border: '1px solid var(--slate-200)',
+            borderRadius: 6, padding: '10px 12px',
+            boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+          }}>
+            <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: 'var(--slate-700)' }}>Prix/m² (DVF)</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {[
+                { color: '#4ade80', label: '< 2 000 €' },
+                { color: '#86efac', label: '2 000 – 3 500 €' },
+                { color: '#fde047', label: '3 500 – 5 500 €' },
+                { color: '#fb923c', label: '5 500 – 8 000 €' },
+                { color: '#ef4444', label: '8 000 – 12 000 €' },
+                { color: '#9333ea', label: '> 12 000 €' },
+                { color: '#aaaaaa', label: 'Inconnu' },
+              ].map(({ color, label }) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: 'var(--slate-600)' }}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Légende DPE */}
+        {visibleOverlays.has('dpe') && !visibleOverlays.has('dvf') && (
+          <div style={{
+            position: 'absolute', bottom: 10, left: 16, zIndex: 3,
+            background: 'white', border: '1px solid var(--slate-200)',
+            borderRadius: 6, padding: '10px 12px',
+            boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+          }}>
+            <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: 'var(--slate-700)' }}>Étiquette DPE</p>
+            <div style={{ display: 'flex', gap: 3 }}>
+              {(['A','B','C','D','E','F','G'] as const).map((l) => (
+                <span
+                  key={l}
+                  style={{
+                    width: 20, height: 20, borderRadius: 3,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, fontWeight: 700, color: 'white',
+                    background: { A:'#319834',B:'#33CC33',C:'#CACC32',D:'#FBCA01',E:'#FB9A00',F:'#FB6A01',G:'#E9161C' }[l],
+                  }}
+                >{l}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(parcelle || loading) && (
+          <InfoPanel parcelle={parcelle} loading={loading} onClose={closePanel} />
+        )}
+
+        {/* Mentions légales — bas de carte */}
+        <div style={{ position: 'absolute', bottom: 6, right: 8, zIndex: 3 }}>
+          <Link
+            href="/mentions-legales"
+            style={{ fontSize: 11, color: 'rgba(0,0,0,0.45)', textDecoration: 'none', background: 'rgba(255,255,255,0.75)', padding: '2px 6px', borderRadius: 3 }}
+          >
+            Mentions légales
+          </Link>
+        </div>
+
+      </div>
     </div>
   )
 }

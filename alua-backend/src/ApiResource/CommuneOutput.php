@@ -23,4 +23,6 @@ final class CommuneOutput
     public int $nbDpes = 0;
     public array $distributionDpe = [];  // {A:n, B:n, C:n, D:n, E:n, F:n, G:n}
     public array $evolutionPrix = [];    // [{annee, nbVentes, prixMedianM2}]
+    public array $transactions = [];     // [{idMutation, date, valeurFonciere, nature, typeLocal, surfaceBati, surfaceCarrez, nombrePieces, idParcelle}]
+    public bool $transactionsTruncated = false;
 }

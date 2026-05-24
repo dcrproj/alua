@@ -1,5 +1,6 @@
 'use client'
 
+import { useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 
 const MapView = dynamic(() => import('./MapView'), {
@@ -12,5 +13,16 @@ const MapView = dynamic(() => import('./MapView'), {
 })
 
 export default function MapWrapper() {
-  return <MapView />
+  const params = useSearchParams()
+  const lat = params.get('lat')
+  const lon = params.get('lon')
+  const zoom = params.get('zoom')
+  const parcelleId = params.get('parcelle') ?? undefined
+
+  const initialFocus =
+    lat && lon
+      ? { lat: parseFloat(lat), lon: parseFloat(lon), zoom: zoom ? parseFloat(zoom) : 18, parcelleId }
+      : undefined
+
+  return <MapView initialFocus={initialFocus} />
 }

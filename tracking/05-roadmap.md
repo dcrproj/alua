@@ -14,10 +14,11 @@
 Phase 0 — Cadrage          ██████ Terminée
 Phase 1 — Backend          ██████ Terminée
 Phase 2 — Frontend         ██████ Terminée (PLU différé Phase 4)
-Phase 3 — Enrichissement   ░░░░░░ En cours
-Phase 4 — SEO & contenu    ░░░░░░ À venir
-Phase 5 — API B2B          ░░░░░░ À venir
-Phase 6 — Mise en prod     ░░░░░░ À venir
+Phase 3 — Enrichissement   ██████ Terminée
+Phase 4 — SEO & contenu    ██████ Terminée
+Phase 5 — Webdesign        ██████ Terminée
+Phase 6 — Mise en prod     ▓▓░░░░ En cours
+Phase 7 — API B2B          ░░░░░░ À venir
 ```
 
 **Périmètre géographique :** France métropolitaine (96 départements)
@@ -173,9 +174,9 @@ Phase 6 — Mise en prod     ░░░░░░ À venir
 - [x] Import Sitadel (permis de construire)
 - [x] Import SIRENE (entreprises à l'adresse — croiser avec parcelles)
 - [ ] Import locaux et parcelles des personnes morales DGFiP (propriétaires entreprises/collectivités)
-- [ ] Couches carto supplémentaires (altimétrie, géologie)
-- [ ] Intégration orthophotos historiques IGN
-- [ ] POI à proximité (via Overpass API OpenStreetMap)
+- [ ] Couches carto supplémentaires (altimétrie, géologie) — différé post-V1
+- [ ] Intégration orthophotos historiques IGN — différé post-V1
+- [x] POI à proximité (via Overpass API OpenStreetMap)
 
 **Livrable :** la plateforme la plus exhaustive du marché
 
@@ -183,45 +184,53 @@ Phase 6 — Mise en prod     ░░░░░░ À venir
 
 ## Phase 4 — SEO & Contenu
 
-### 4.1 — Génération des URLs et sitemaps
+### 4.1 — ISR pour les fiches (priorité 1)
 
-- [ ] Définir l'arborescence d'URLs SEO (voir `06-seo-strategie.md`)
-- [ ] Générer sitemap XML par type d'entité (communes, parcelles…)
-- [ ] Soumettre à Google Search Console
+- [x] Configurer l'ISR Next.js par type de fiche
+- [x] Balises méta dynamiques (title, description, Open Graph)
+- [x] Données structurées JSON-LD (Schema.org : `Place`, `City`, `BreadcrumbList`)
+- [x] Breadcrumbs structurés (JSON-LD)
 
-### 4.2 — ISR pour les fiches
+### 4.2 — Génération des URLs et sitemaps (priorité 2)
 
-- [ ] Configurer l'ISR Next.js par type de fiche
-- [ ] Balises méta dynamiques (title, description, Open Graph)
-- [ ] Données structurées JSON-LD (Schema.org : `Place`, `RealEstateListing`)
-- [ ] Breadcrumbs structurés
+- [x] Définir l'arborescence d'URLs SEO (communes + parcelles avec transactions)
+- [x] Générer sitemap XML par type d'entité (communes ~35k + parcelles ~5-8M par batches de 50k)
 
-### 4.3 — Contenu enrichi
+### 4.3 — Contenu enrichi (priorité 3)
 
-- [ ] Templates de texte dans les React Server Components Next.js (prix médian, évolution, DPE moyen…)
-- [ ] Graphiques d'évolution des prix (Recharts ou Chart.js)
-- [ ] Historique de la parcelle affiché dans la fiche
-
-### 4.4 — Publicité
-
-- [ ] Intégration Google AdSense
-- [ ] Positionnement des encarts pub (sans dégrader le Core Web Vitals)
+- [x] Templates de texte dans les React Server Components Next.js (résumé parcelle + commune : prix médian, tendance, DPE)
+- [x] Graphiques d'évolution des prix (SVG custom — Recharts non nécessaire)
+- [x] Historique de la parcelle affiché dans la fiche (timeline transactions + DPE + permis)
 
 **Livrable :** site crawlable par Google avec contenu structuré
 
 ---
 
-## Phase 5 — API B2B (2027)
+## Phase 5 — Webdesign & Identité
 
-- [ ] Définir le catalogue de l'API publique
-- [ ] Système d'authentification API (clés API, OAuth2)
-- [ ] Rate limiting par plan
-- [ ] Documentation API (Swagger / Stoplight)
-- [ ] Tableau de bord client (usage, factures)
-- [ ] Intégration paiement (Stripe)
-- [ ] Plans tarifaires : Starter / Pro / Enterprise
+### 5.1 — Nom & domaine
+- [x] Trouver le nom définitif du produit : **Geocopia**
+- [x] Commander le nom de domaine : `geocopia.fr` réservé
+- [x] Réserver `geocopia.com` (défensif) — commandé mai 2026
 
-**Livrable :** API commercialisable avec documentation et portail développeur
+### 5.2 — Charte graphique (Claude Design)
+- [x] Définir l'identité visuelle (palette, typographie, logo) via Claude Design
+- [x] Valider la charte sur une maquette — design exporté et sauvegardé (`src/styles/geocopia-uikit.css`)
+
+### 5.3 — Redesign application
+- [x] Implémenter le design system (globals.css — tokens Geocopia : slate + amber + DPE)
+- [x] Mise à jour layout.tsx : Syne + Inter + JetBrains Mono, Geocopia → layout.tsx
+- [x] Appliquer la charte graphique à la page Carte + InfoPanel (380px, chip PARCELLE, stats grid, CTA)
+- [x] Fiche parcelle : dark hero (slate-900), mini-carte satellite IGN interactive, section icons colorées, layout éditorial 2 colonnes
+- [x] Header partagé GeocopiaHeader (logo gauche, barre de recherche centrée, nav droite)
+- [x] Favicon : picto G (slate-900 + amber) via next/og
+- [x] Carte : couleurs accent amber sur les aires admin (au lieu du bleu)
+- [x] TOC fiche parcelle : navigation fluide avec scrollIntoView client-side
+- [x] Dates de mise à jour per-source dans le breadcrumb (DVF · DPE)
+- [x] Recherche fiche parcelle : redirige vers la parcelle associée à l'adresse
+- [x] Appliquer la charte aux fiches commune et adresse
+
+**Livrable :** application avec une identité visuelle cohérente et professionnelle
 
 ---
 
@@ -305,19 +314,52 @@ php bin/console app:import:dpe
 → Le VPS-3 (200 GB NVMe) couvre les besoins avec **~100 GB de marge** pour la croissance.
 
 ### 6.2 — Déploiement applicatif
-- [ ] Configurer nginx avec rate limiting par IP (60–120 req/min)
-- [ ] Configurer SSL (Let's Encrypt / Certbot)
-- [ ] **Désactiver l'accès public à `/api/*` en production** (front et back sur le même serveur — l'API est appelée en interne via `localhost`, pas exposée publiquement ; bloquer dans nginx avec `allow 127.0.0.1; deny all;` sur la location `/api`)
-- [ ] CI/CD GitHub Actions (tests + déploiement automatique sur push main)
-- [ ] Script de déploiement Symfony (cache warmup, migrations auto)
-- [ ] Script de déploiement Next.js (build + redémarrage PM2 ou équivalent)
-- [ ] Variables d'environnement de production sécurisées
+- [ ] Soumettre le sitemap à Google Search Console
+- [x] Page mentions légales (`/mentions-legales`) — éditeur, hébergeur, RGPD, sources
+- [x] Déploiement frontend sur VPS (rsync + npm ci + npm run build)
+- [x] PM2 : `geocopia-front` port 3001, martin via systemd port 3000
+- [x] nginx : rate limiting 60 req/min, proxy Next.js / Symfony / martin — `tracking/nginx-geocopia.conf`
+- [x] SSL Let's Encrypt — cert geocopia.fr + www, renouvellement auto Certbot
+- [x] Ancienne config `alua` (URL VPS temporaire) désactivée
+- **Décision :** `/api` reste public (nécessaire pour appels client-side) — protégé rate limiting nginx + Cloudflare Phase 6.3
+- [x] CI/CD GitHub Actions (déploiement automatique sur push main) — `.github/workflows/deploy.yml`
+- [x] Script de déploiement Symfony (cache warmup, migrations auto) — `scripts/deploy-backend.sh`
+- [x] Script de déploiement Next.js (build + redémarrage PM2) — `scripts/deploy-frontend.sh`
+- [ ] Variables d'environnement de production sécurisées — voir ci-dessous
+
+**GitHub Secrets à configurer** (`Settings → Secrets and variables → Actions`) :
+| Secret | Valeur |
+|--------|--------|
+| `VPS_HOST` | `54.37.39.140` |
+| `VPS_USER` | `david` |
+| `VPS_SSH_KEY` | clé privée ED25519 dédiée CI/CD (à générer) |
+
+**Génération de la clé CI/CD** (à faire une seule fois) :
+```bash
+ssh-keygen -t ed25519 -C "github-actions-geocopia" -f ~/.ssh/geocopia_deploy -N ""
+# Ajouter la clé publique sur le VPS :
+ssh-copy-id -i ~/.ssh/geocopia_deploy.pub david@54.37.39.140
+# Copier la clé privée dans le secret GitHub VPS_SSH_KEY :
+cat ~/.ssh/geocopia_deploy
+```
+
+**Variables d'environnement backend VPS** (`/home/david/www/alua/alua-backend/.env.local`) :
+```dotenv
+APP_SECRET=<32-char-random>
+DATABASE_URL="postgresql://alua:<password>@127.0.0.1:5432/alua?serverVersion=17&charset=utf8"
+```
 
 ### 6.3 — Cloudflare
-- [ ] Configurer le domaine sur Cloudflare
-- [ ] Activer le CDN et les règles de cache
+- [ ] Pointer le domaine geocopia.fr sur Cloudflare (changer les NS)
+- [ ] Activer le CDN et les règles de cache (tiles agressif, api bypass)
+- [ ] **Bot Fight Mode + rate limiting strict sur `/api/*`** (protection scraping)
+- [ ] Créer la boîte mail contact@geocopia.fr (Email Routing → dcrbernard@gmail.com)
 
-### 6.4 — Mises à jour récurrentes (post go-live)
+### 6.4 — Publicité
+- [ ] Intégration Google AdSense
+- [ ] Positionnement des encarts pub (sans dégrader le Core Web Vitals)
+
+### 6.5 — Mises à jour récurrentes (post go-live)
 
 Les commandes d'import sont idempotentes (`ON CONFLICT DO UPDATE`) — on les relance
 directement sur le VPS selon les TTL.
@@ -332,3 +374,28 @@ directement sur le VPS selon les TTL.
 - [ ] Configurer les cronjobs de refresh (voir Phase 1.7)
 
 **Livrable :** site en ligne, déploiements automatisés, données France entière en base
+
+---
+
+## Phase 7 — API B2B
+
+### 7.1 — Conception API publique
+- [ ] Définir le périmètre de l'API (endpoints, niveaux d'accès, quotas)
+- [ ] Authentification par clé API (header `X-Api-Key`)
+- [ ] Rate limiting par clé (ex. 1 000 req/jour gratuit, paliers payants)
+
+### 7.2 — Documentation et portail développeur
+- [ ] Documentation OpenAPI / Swagger auto-générée
+- [ ] Page `/developers` avec exemples d'intégration
+- [ ] Portail self-service : création de compte, génération de clé, suivi quota
+
+### 7.3 — Monétisation API
+- [ ] Intégration Stripe (abonnements mensuels par palier)
+- [ ] Webhooks Stripe → activation/désactivation clés
+- [ ] Dashboard client (consommation, factures)
+
+### 7.4 — Distribution
+- [ ] Référencement sur api.gouv.fr (données immobilières)
+- [ ] Partenariats ciblés (notaires, agents immobiliers, banques, proptech)
+
+**Livrable :** API B2B documentée, monétisée et accessible en self-service

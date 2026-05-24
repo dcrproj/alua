@@ -100,6 +100,49 @@ final class CommuneStateProvider implements ProviderInterface
             'prixMedianM2'=> $r['prix_median'] !== null ? round((float) $r['prix_median'], 0) : null,
         ], $evolRows);
 
+        // 50 ventes les plus récentes avec le lot principal (surface la plus grande)
+        $limit = 50;
+        $txRows = $this->connection->fetchAllAssociative(
+            "SELECT
+                m.id_mutation,
+                m.date_mutation::text AS date_mutation,
+                m.nature_mutation,
+                m.valeur_fonciere::float AS valeur_fonciere,
+                l.id_parcelle,
+                l.type_local,
+                l.surface_reelle_bati,
+                l.surface_carrez,
+                l.nombre_pieces_principales,
+                l.adresse_numero,
+                l.adresse_nom_voie
+             FROM mutations_dvf m
+             LEFT JOIN LATERAL (
+                SELECT l2.id_parcelle, l2.type_local, l2.surface_reelle_bati, l2.surface_carrez, l2.nombre_pieces_principales, l2.adresse_numero, l2.adresse_nom_voie
+                FROM mutations_dvf_lots l2
+                WHERE l2.mutation_dvf_id = m.id
+                ORDER BY l2.surface_reelle_bati DESC NULLS LAST, l2.id
+                LIMIT 1
+             ) l ON true
+             WHERE m.code_commune = :code
+               AND m.nature_mutation = 'Vente'
+             ORDER BY m.date_mutation DESC
+             LIMIT :limit",
+            ['code' => $code, 'limit' => $limit]
+        );
+        $output->transactionsTruncated = count($txRows) >= $limit && $output->nbTransactions > $limit;
+        $output->transactions = array_map(fn(array $r) => [
+            'idMutation'     => $r['id_mutation'],
+            'date'           => $r['date_mutation'],
+            'valeurFonciere' => $r['valeur_fonciere'] !== null ? (float) $r['valeur_fonciere'] : null,
+            'nature'         => $r['nature_mutation'],
+            'typeLocal'      => $r['type_local'],
+            'surfaceBati'    => $r['surface_reelle_bati'] !== null ? (float) $r['surface_reelle_bati'] : null,
+            'surfaceCarrez'  => $r['surface_carrez'] !== null ? (float) $r['surface_carrez'] : null,
+            'nombrePieces'   => $r['nombre_pieces_principales'] !== null ? (int) $r['nombre_pieces_principales'] : null,
+            'idParcelle'     => $r['id_parcelle'],
+            'adresse'        => trim(($r['adresse_numero'] ?? '') . ' ' . ($r['adresse_nom_voie'] ?? '')) ?: null,
+        ], $txRows);
+
         // Stale-while-revalidate : si des DPE de cette commune sont expirés, dispatch refresh
         $this->dispatchIfStale($code);
 

@@ -1,0 +1,171 @@
+/* Geocopia UI Kit — design system tokens & base components
+ * Source: Claude Design export (geocopia.fr)
+ * Import this in components that need direct access to gc-* classes or --gc-* vars.
+ */
+
+/* ─── Palette ──────────────────────────────────────────────── */
+:root {
+  --slate-900: #1e293b;
+  --slate-800: #1f2a3a;
+  --slate-700: #334155;
+  --slate-600: #475569;
+  --slate-500: #64748b;
+  --slate-400: #94a3b8;
+  --slate-300: #cbd5e1;
+  --slate-200: #e2e8f0;
+  --slate-100: #f1f5f9;
+  --slate-50:  #f8fafc;
+
+  --amber-700: #b45309;
+  --amber-600: #d97706;
+  --amber-500: #f59e0b;
+  --amber-100: #fef3c7;
+  --amber-50:  #fffbeb;
+
+  /* DPE — norme française */
+  --dpe-a: #319834;
+  --dpe-b: #41a93c;
+  --dpe-c: #aac638;
+  --dpe-d: #f0e72e;
+  --dpe-e: #f1bb31;
+  --dpe-f: #ec7c2f;
+  --dpe-g: #db342b;
+
+  /* Semantic aliases */
+  --gc-bg:      #f8fafc;
+  --gc-surface: #ffffff;
+  --gc-border:  #e2e8f0;
+  --gc-muted:   #64748b;
+  --gc-ink:     #1e293b;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius:    6px;
+  --radius-lg: 8px;
+}
+
+/* ─── Buttons ──────────────────────────────────────────────── */
+.gc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background .15s, border-color .15s, color .15s;
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: inherit;
+}
+.gc-btn-primary  { background: var(--slate-900); color: white; }
+.gc-btn-primary:hover  { background: #0f172a; }
+.gc-btn-secondary { background: white; color: var(--slate-900); border-color: var(--slate-200); }
+.gc-btn-secondary:hover { background: var(--slate-50); border-color: var(--slate-300); }
+.gc-btn-ghost    { background: transparent; color: var(--slate-700); }
+.gc-btn-ghost:hover    { background: var(--slate-100); }
+.gc-btn-accent   { background: var(--amber-600); color: white; }
+.gc-btn-accent:hover   { background: var(--amber-700); }
+.gc-btn-sm { height: 28px; padding: 0 10px; font-size: 13px; }
+.gc-btn-lg { height: 44px; padding: 0 18px; font-size: 15px; }
+
+/* ─── DPE badges ───────────────────────────────────────────── */
+.gc-dpe {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-weight: 700;
+  color: white;
+  font-size: 14px;
+  border-radius: 3px;
+}
+.gc-dpe-A { background: var(--dpe-a); }
+.gc-dpe-B { background: var(--dpe-b); }
+.gc-dpe-C { background: var(--dpe-c); color: #1a3500; }
+.gc-dpe-D { background: var(--dpe-d); color: #4a3a00; }
+.gc-dpe-E { background: var(--dpe-e); color: #4a2900; }
+.gc-dpe-F { background: var(--dpe-f); }
+.gc-dpe-G { background: var(--dpe-g); }
+
+/* ─── Chips / tags ─────────────────────────────────────────── */
+.gc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--slate-100);
+  color: var(--slate-700);
+  border: 1px solid var(--slate-200);
+}
+.gc-chip-amber { background: var(--amber-50); color: var(--amber-700); border-color: #fde68a; }
+.gc-chip-slate { background: var(--slate-900); color: white; border-color: var(--slate-900); }
+
+/* ─── Inputs ───────────────────────────────────────────────── */
+.gc-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius);
+  background: white;
+  color: var(--slate-900);
+  font-size: 14px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.gc-input:focus, .gc-input:focus-within {
+  outline: none;
+  border-color: var(--slate-900);
+  box-shadow: 0 0 0 3px rgba(30,41,59,.08);
+}
+.gc-input input { border: 0; outline: none; background: transparent; width: 100%; color: inherit; }
+.gc-input input::placeholder { color: var(--slate-400); }
+
+/* ─── Cards ────────────────────────────────────────────────── */
+.gc-card {
+  background: white;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius);
+}
+
+/* ─── Typography helpers ───────────────────────────────────── */
+.gc-section-h {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--slate-500);
+}
+.gc-stat-label { font-size: 12px; color: var(--slate-500); letter-spacing: 0.02em; }
+.gc-stat-val   { font-size: 22px; font-weight: 600; color: var(--slate-900); }
+.gc-mono       { font-variant-numeric: tabular-nums; }
+.gc-tabular    { font-variant-numeric: tabular-nums; }
+.gc-divider    { height: 1px; background: var(--slate-200); }
+
+/* ─── Section icons ────────────────────────────────────────── */
+.gc-icon-dvf        { background: rgba(30,41,59,0.07);  color: var(--slate-700); }
+.gc-icon-dpe        { background: rgba(65,169,60,0.13); color: #2d7a2d; }
+.gc-icon-risques    { background: var(--amber-50);      color: var(--amber-700); }
+.gc-icon-batiments  { background: rgba(30,41,59,0.07);  color: var(--slate-700); }
+.gc-icon-copro      { background: rgba(30,41,59,0.07);  color: var(--slate-700); }
+.gc-icon-entreprises{ background: rgba(37,99,235,0.10); color: #1e4ed8; }
+.gc-icon-proximite  { background: rgba(217,119,6,0.10); color: var(--amber-700); }
+.gc-icon-historique { background: rgba(30,41,59,0.07);  color: var(--slate-500); }
+.gc-icon-permis     { background: rgba(37,99,235,0.08); color: #1d4ed8; }
+.gc-icon-patrimoine { background: rgba(217,119,6,0.10); color: var(--amber-700); }
+
+/* ─── Scrollbar hide ───────────────────────────────────────── */
+.gc-noscroll::-webkit-scrollbar { display: none; }
+.gc-noscroll { scrollbar-width: none; }
+
+/* ─── Focus ring ───────────────────────────────────────────── */
+.gc-focus:focus-visible { outline: 2px solid var(--amber-600); outline-offset: 2px; }

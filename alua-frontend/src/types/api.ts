@@ -55,6 +55,19 @@ export interface SectionData<T> {
   updatedAt: string | null
 }
 
+export interface CommuneTransaction {
+  idMutation: string
+  date: string | null
+  valeurFonciere: number | null
+  nature: string | null
+  typeLocal: string | null
+  surfaceBati: number | null
+  surfaceCarrez: number | null
+  nombrePieces: number | null
+  idParcelle: string | null
+  adresse: string | null
+}
+
 export interface Commune {
   code: string
   nom: string | null
@@ -64,6 +77,8 @@ export interface Commune {
   nbDpes: number
   distributionDpe: Record<string, number>
   evolutionPrix: { annee: number; nbVentes: number; prixMedianM2: number | null }[]
+  transactions: CommuneTransaction[]
+  transactionsTruncated: boolean
 }
 
 export interface AddressParcelleRef {
@@ -194,6 +209,22 @@ export interface SireneEtablissement {
   nafLibelle: string | null
   estSiege: boolean
   dateCreation: string | null
+}
+
+export interface PoiItem {
+  name: string | null
+  type: string
+  distM: number
+}
+
+export interface PoiCategory {
+  label: string
+  items: PoiItem[]
+}
+
+export interface ParcellePoi {
+  categories: PoiCategory[]
+  fetchedAt: string | null
 }
 
 export interface ApiCollection<T> {
