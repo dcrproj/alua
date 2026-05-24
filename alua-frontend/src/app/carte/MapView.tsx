@@ -350,6 +350,19 @@ export default function MapView({ initialFocus }: { initialFocus?: InitialFocus 
     return () => { map.remove(); mapRef.current = null }
   }, [])
 
+  // Fetch parcelle immédiatement au montage — n'attend pas la carte
+  useEffect(() => {
+    const focus = initialFocusRef.current
+    if (!focus?.parcelleId) return
+    setLoading(true)
+    fetch(`${API_URL}/api/parcelles/${focus.parcelleId}`, { headers: { Accept: 'application/ld+json' } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setParcelle(data) })
+      .finally(() => setLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Positionne la carte quand elle est prête (visuel uniquement)
   useEffect(() => {
     const map = mapRef.current
     if (!mapReady || !map) return
@@ -358,11 +371,6 @@ export default function MapView({ initialFocus }: { initialFocus?: InitialFocus 
     map.jumpTo({ center: [focus.lon, focus.lat], zoom: focus.zoom })
     if (focus.parcelleId) {
       map.setFilter('parcelles-selected', ['==', ['get', 'id'], focus.parcelleId])
-      setLoading(true)
-      fetch(`${API_URL}/api/parcelles/${focus.parcelleId}`, { headers: { Accept: 'application/ld+json' } })
-        .then(r => r.ok ? r.json() : null)
-        .then(data => { if (data) setParcelle(data) })
-        .finally(() => setLoading(false))
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady])

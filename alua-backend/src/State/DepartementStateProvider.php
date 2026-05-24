@@ -53,28 +53,31 @@ final class DepartementStateProvider implements ProviderInterface
         $output->nomRegion   = $row['nom_region'];
         $output->slugRegion  = $row['slug_region'];
 
-        $communeCodes = $this->communeCodesForDept($code);
-        if (empty($communeCodes)) {
-            return $output;
-        }
-
-        $inList = implode(',', array_map(fn($c) => "'" . addslashes($c) . "'", $communeCodes));
-
         $output->nbTransactions = (int) $this->connection->fetchOne(
-            "SELECT COUNT(*) FROM mutations_dvf WHERE code_commune IN ($inList)"
+            "SELECT COUNT(*)
+             FROM mutations_dvf m
+             JOIN communes c ON c.code_insee = m.code_commune
+             WHERE c.code_departement = :dept",
+            ['dept' => $code]
         );
 
-        $output->prixMedianM2 = $this->prixMedian($inList);
+        $output->prixMedianM2 = $this->prixMedian($code);
 
         $output->nbDpes = (int) $this->connection->fetchOne(
-            "SELECT COUNT(*) FROM dpes WHERE code_commune IN ($inList)"
+            "SELECT COUNT(*)
+             FROM dpes dp
+             JOIN communes c ON c.code_insee = dp.code_commune
+             WHERE c.code_departement = :dept",
+            ['dept' => $code]
         );
 
         $dpeRows = $this->connection->fetchAllAssociative(
-            "SELECT etiquette_dpe, COUNT(*) AS nb
-             FROM dpes
-             WHERE code_commune IN ($inList) AND etiquette_dpe IS NOT NULL
-             GROUP BY etiquette_dpe ORDER BY etiquette_dpe"
+            "SELECT dp.etiquette_dpe, COUNT(*) AS nb
+             FROM dpes dp
+             JOIN communes c ON c.code_insee = dp.code_commune
+             WHERE c.code_departement = :dept AND dp.etiquette_dpe IS NOT NULL
+             GROUP BY dp.etiquette_dpe ORDER BY dp.etiquette_dpe",
+            ['dept' => $code]
         );
         foreach ($dpeRows as $r) {
             $output->distributionDpe[$r['etiquette_dpe']] = (int) $r['nb'];
@@ -86,11 +89,13 @@ final class DepartementStateProvider implements ProviderInterface
                     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY m.valeur_fonciere / l.surface_reelle_bati) AS prix_median
              FROM mutations_dvf m
              JOIN mutations_dvf_lots l ON l.mutation_dvf_id = m.id
-             WHERE m.code_commune IN ($inList)
+             JOIN communes c ON c.code_insee = m.code_commune
+             WHERE c.code_departement = :dept
                AND l.surface_reelle_bati > 0
                AND m.valeur_fonciere > 0
                AND m.nature_mutation = 'Vente'
-             GROUP BY annee ORDER BY annee"
+             GROUP BY annee ORDER BY annee",
+            ['dept' => $code]
         );
         $output->evolutionPrix = array_map(fn(array $r) => [
             'annee'        => (int) $r['annee'],
@@ -115,25 +120,19 @@ final class DepartementStateProvider implements ProviderInterface
         return $output;
     }
 
-    private function communeCodesForDept(string $code): array
-    {
-        return $this->connection->fetchFirstColumn(
-            'SELECT code_insee FROM communes WHERE code_departement = :code',
-            ['code' => $code]
-        );
-    }
-
-    private function prixMedian(string $inList): ?float
+    private function prixMedian(string $deptCode): ?float
     {
         $val = $this->connection->fetchOne(
             "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY m.valeur_fonciere / l.surface_reelle_bati)
              FROM mutations_dvf m
              JOIN mutations_dvf_lots l ON l.mutation_dvf_id = m.id
-             WHERE m.code_commune IN ($inList)
+             JOIN communes c ON c.code_insee = m.code_commune
+             WHERE c.code_departement = :dept
                AND l.surface_reelle_bati > 0
                AND m.valeur_fonciere > 0
                AND m.nature_mutation = 'Vente'
-               AND m.date_mutation >= NOW() - INTERVAL '10 years'"
+               AND m.date_mutation >= NOW() - INTERVAL '10 years'",
+            ['dept' => $deptCode]
         );
         return ($val !== false && $val !== null) ? round((float) $val, 0) : null;
     }
