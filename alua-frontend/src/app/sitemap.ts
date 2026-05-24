@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next'
 
 export const dynamic = 'force-dynamic'
 
-const API_URL  = process.env.NEXT_PUBLIC_API_URL!
+const API_URL  = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL!
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://alua.fr'
 
 export async function generateSitemaps() {

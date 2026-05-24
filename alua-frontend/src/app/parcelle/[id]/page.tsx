@@ -7,7 +7,7 @@ import ParcelleHeroMapClient from './ParcelleHeroMapClient'
 import ParcelleTocNav from './ParcelleTocNav'
 import ParcelleFicheHeader from './ParcelleFicheHeader'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL!
+const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL!
 
 // ─── Section icon component ─────────────────────────────────────────────────
 

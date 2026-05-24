@@ -6,7 +6,7 @@ import { formatPrice, formatDate, DpeBadge } from '@/components/fiche'
 import GeocopiaHeader from '@/components/GeocopiaHeader'
 import AddressMapWrapper from './AddressMapWrapper'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL!
+const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL!
 
 export async function generateMetadata({ params }: { params: Promise<{ banId: string }> }) {
   const { banId } = await params

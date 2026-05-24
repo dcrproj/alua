@@ -19,7 +19,7 @@ class SitemapController extends AbstractController
     public function communes(): JsonResponse
     {
         $rows = $this->connection->fetchFirstColumn(
-            'SELECT code FROM communes ORDER BY code'
+            'SELECT code_insee FROM communes ORDER BY code_insee'
         );
         return $this->json($rows);
     }

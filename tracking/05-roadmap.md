@@ -350,10 +350,11 @@ DATABASE_URL="postgresql://alua:<password>@127.0.0.1:5432/alua?serverVersion=17&
 ```
 
 ### 6.3 — Cloudflare
-- [ ] Pointer le domaine geocopia.fr sur Cloudflare (changer les NS)
-- [ ] Activer le CDN et les règles de cache (tiles agressif, api bypass)
-- [ ] **Bot Fight Mode + rate limiting strict sur `/api/*`** (protection scraping)
-- [ ] Créer la boîte mail contact@geocopia.fr (Email Routing → dcrbernard@gmail.com)
+- [x] Pointer le domaine geocopia.fr sur Cloudflare (changer les NS)
+- [x] SSL/TLS Full (strict)
+- [x] Activer le CDN et les règles de cache (tiles : 1 day, api : bypass)
+- [x] **Bot Fight Mode + rate limiting strict sur `/api/*`** (20 req/10s par IP — protection scraping)
+- [x] Créer la boîte mail contact@geocopia.fr (Email Routing → dcrbernard@gmail.com)
 
 ### 6.4 — Publicité
 - [ ] Intégration Google AdSense
