@@ -355,7 +355,7 @@ export default function MapView({ initialFocus }: { initialFocus?: InitialFocus 
     if (!mapReady || !map) return
     const focus = initialFocusRef.current
     if (!focus) return
-    map.flyTo({ center: [focus.lon, focus.lat], zoom: focus.zoom, duration: 800 })
+    map.jumpTo({ center: [focus.lon, focus.lat], zoom: focus.zoom })
     if (focus.parcelleId) {
       map.setFilter('parcelles-selected', ['==', ['get', 'id'], focus.parcelleId])
       setLoading(true)
