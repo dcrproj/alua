@@ -5,6 +5,17 @@ import GeocopiaHeader from '@/components/GeocopiaHeader'
 
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL!
 
+export async function generateStaticParams() {
+  try {
+    const res = await fetch(`${API_URL}/api/departements-index`, { next: { revalidate: 86400 } })
+    if (!res.ok) return []
+    const depts: { slug: string }[] = await res.json()
+    return depts.filter(d => d.slug).map(d => ({ slug: d.slug }))
+  } catch {
+    return []
+  }
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const res = await fetch(`${API_URL}/api/departements/${slug}`, { headers: { Accept: 'application/ld+json' } })
