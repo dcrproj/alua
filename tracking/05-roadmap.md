@@ -428,7 +428,7 @@ directement sur le VPS selon les TTL.
 - [x] `RealEstateListing` + `Offer` pour chaque transaction DVF sur les fiches (prix, date, surface) — fiche parcelle (10 tx) + fiche commune (20 tx)
 - [ ] `GeoCoordinates` sur les fiches adresse et parcelle (lat/lng depuis PostGIS)
 - [x] `FAQPage` sur les fiches commune — 3 Q&R générées dynamiquement (prix médian, nb ventes, DPE)
-- [ ] `Dataset` en JSON-LD sur la page d'accueil (référence les sources ouvertes utilisées)
+- [x] `Dataset` en JSON-LD sur la page d'accueil (référence les sources ouvertes utilisées)
 
 ### 7.5 — Performance & Stabilité (anti-503)
 
