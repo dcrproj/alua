@@ -1,6 +1,3 @@
-'use client'
-
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, Briefcase, MapPin } from 'lucide-react'
 import { formatDate } from '@/components/fiche'
@@ -9,7 +6,7 @@ import type {
   SitadelPermis, SireneEtablissement, ParcellePoi, PoiCategory,
 } from '@/types/api'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL!
+const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL!
 
 // ─── Layout helpers ───────────────────────────────────────────────────────────
 
@@ -35,10 +32,6 @@ function SectionHeader({ kind, icon, title, count, source }: {
       {source && <span className="text-sm" style={{ color: 'var(--slate-500)' }}>{source}</span>}
     </div>
   )
-}
-
-function SectionSkeleton() {
-  return <div style={{ height: 120, background: 'var(--slate-50)', borderRadius: 8, marginBottom: 56 }} />
 }
 
 // ─── Risques ─────────────────────────────────────────────────────────────────
@@ -67,18 +60,13 @@ function RisqueTableRow({ r }: { r: RisqueDisplay }) {
   )
 }
 
-function RisquesSection({ idParcelle }: { idParcelle: string }) {
-  const [risques, setRisques] = useState<ParcelleRisques | null>(null)
-  const [loading, setLoading] = useState(true)
+export async function RisquesServerSection({ idParcelle }: { idParcelle: string }) {
+  let risques: ParcelleRisques | null = null
+  try {
+    const res = await fetch(`${API_URL}/api/parcelles/${idParcelle}/risques`, { next: { revalidate: 86400 } })
+    if (res.ok) risques = await res.json()
+  } catch { /* réseau indisponible → section absente */ }
 
-  useEffect(() => {
-    fetch(`${API_URL}/api/parcelles/${idParcelle}/risques`)
-      .then(r => r.ok ? r.json() : null)
-      .then(setRisques)
-      .finally(() => setLoading(false))
-  }, [idParcelle])
-
-  if (loading) return <SectionSkeleton />
   if (!risques?.risques?.length) return null
 
   return (
@@ -150,18 +138,14 @@ const NAF_DIVISIONS: Record<string, string> = {
 const nafLibelle = (code: string | null) =>
   code ? (NAF_DIVISIONS[code.slice(0, 2)] ?? null) : null
 
-function EntreprisesSection({ idParcelle }: { idParcelle: string }) {
-  const [data, setData] = useState<SectionData<SireneEtablissement>>({ items: [], updatedAt: null })
-  const [loading, setLoading] = useState(true)
+export async function EntreprisesServerSection({ idParcelle }: { idParcelle: string }) {
+  let data: SectionData<SireneEtablissement> = { items: [], updatedAt: null }
+  try {
+    const res = await fetch(`${API_URL}/api/parcelles/${idParcelle}/entreprises`, { next: { revalidate: 3600 } })
+    if (res.ok) data = await res.json()
+  } catch { /* section absente */ }
 
-  useEffect(() => {
-    fetch(`${API_URL}/api/parcelles/${idParcelle}/entreprises`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => d && setData(d))
-      .finally(() => setLoading(false))
-  }, [idParcelle])
-
-  if (loading || !data.items.length) return null
+  if (!data.items.length) return null
 
   return (
     <section id="section-entreprises" style={{ marginBottom: 56 }}>
@@ -199,18 +183,14 @@ function EntreprisesSection({ idParcelle }: { idParcelle: string }) {
 
 // ─── POI ─────────────────────────────────────────────────────────────────────
 
-function PoiSection({ idParcelle }: { idParcelle: string }) {
-  const [data, setData] = useState<ParcellePoi>({ categories: [], fetchedAt: null })
-  const [loading, setLoading] = useState(true)
+export async function PoiServerSection({ idParcelle }: { idParcelle: string }) {
+  let data: ParcellePoi = { categories: [], fetchedAt: null }
+  try {
+    const res = await fetch(`${API_URL}/api/parcelles/${idParcelle}/poi`, { next: { revalidate: 86400 } })
+    if (res.ok) data = await res.json()
+  } catch { /* section absente */ }
 
-  useEffect(() => {
-    fetch(`${API_URL}/api/parcelles/${idParcelle}/poi`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => d && setData(d))
-      .finally(() => setLoading(false))
-  }, [idParcelle])
-
-  if (loading || !data.categories.length) return null
+  if (!data.categories.length) return null
 
   return (
     <section id="section-proximite" style={{ marginBottom: 56 }}>
@@ -238,16 +218,15 @@ function PoiSection({ idParcelle }: { idParcelle: string }) {
 
 // ─── Copropriété (sidebar) ────────────────────────────────────────────────────
 
-function CoproprieteSection({ idParcelle }: { idParcelle: string }) {
-  const [data, setData] = useState<SectionData<Copropriete>>({ items: [], updatedAt: null })
-
-  useEffect(() => {
-    fetch(`${API_URL}/api/parcelles/${idParcelle}/coproprietes`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => d && setData(d))
-  }, [idParcelle])
+export async function CoproprieteServerSection({ idParcelle }: { idParcelle: string }) {
+  let data: SectionData<Copropriete> = { items: [], updatedAt: null }
+  try {
+    const res = await fetch(`${API_URL}/api/parcelles/${idParcelle}/coproprietes`, { next: { revalidate: 3600 } })
+    if (res.ok) data = await res.json()
+  } catch { /* section absente */ }
 
   if (!data.items.length) return null
+
   return (
     <div className="pt-5" style={{ borderTop: '1px solid var(--slate-200)' }}>
       <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--slate-900)', fontFamily: 'var(--font-body)' }}>
@@ -307,16 +286,15 @@ const ETAT_COLORS: Record<string, string> = {
   'Annulé': 'bg-gray-100 text-gray-500', 'Refusé': 'bg-red-50 text-red-700',
 }
 
-function PermisSection({ idParcelle }: { idParcelle: string }) {
-  const [data, setData] = useState<SectionData<SitadelPermis>>({ items: [], updatedAt: null })
-
-  useEffect(() => {
-    fetch(`${API_URL}/api/parcelles/${idParcelle}/permis`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => d && setData(d))
-  }, [idParcelle])
+export async function PermisServerSection({ idParcelle }: { idParcelle: string }) {
+  let data: SectionData<SitadelPermis> = { items: [], updatedAt: null }
+  try {
+    const res = await fetch(`${API_URL}/api/parcelles/${idParcelle}/permis`, { next: { revalidate: 3600 } })
+    if (res.ok) data = await res.json()
+  } catch { /* section absente */ }
 
   if (!data.items.length) return null
+
   return (
     <div className="pt-5" style={{ borderTop: '1px solid var(--slate-200)' }}>
       <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--slate-900)', fontFamily: 'var(--font-body)' }}>
@@ -341,26 +319,5 @@ function PermisSection({ idParcelle }: { idParcelle: string }) {
         ))}
       </div>
     </div>
-  )
-}
-
-// ─── Exports ─────────────────────────────────────────────────────────────────
-
-export function ParcelleMainClientSections({ idParcelle }: { idParcelle: string }) {
-  return (
-    <>
-      <RisquesSection idParcelle={idParcelle} />
-      <EntreprisesSection idParcelle={idParcelle} />
-      <PoiSection idParcelle={idParcelle} />
-    </>
-  )
-}
-
-export function ParcelleSidebarClientSections({ idParcelle }: { idParcelle: string }) {
-  return (
-    <>
-      <CoproprieteSection idParcelle={idParcelle} />
-      <PermisSection idParcelle={idParcelle} />
-    </>
   )
 }

@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { Euro, Flame, History } from 'lucide-react'
 import type { Parcelle, ParcelleTransaction, ParcelleTransactionLot, ParcelleDpe, SectionData, Commune, ParcellePatrimoine, BatimentBdnb } from '@/types/api'
@@ -6,7 +7,13 @@ import { formatPrice, formatDate, DpeBadge, PrixEvolutionChart, DpeDistributionB
 import ParcelleHeroMapClient from './ParcelleHeroMapClient'
 import ParcelleTocNav from './ParcelleTocNav'
 import ParcelleFicheHeader from './ParcelleFicheHeader'
-import { ParcelleMainClientSections, ParcelleSidebarClientSections } from './ParcelleClientSections'
+import {
+  RisquesServerSection,
+  EntreprisesServerSection,
+  PoiServerSection,
+  CoproprieteServerSection,
+  PermisServerSection,
+} from './ParcelleServerSections'
 
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL!
 
@@ -484,8 +491,16 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
             )}
           </section>
 
-          {/* Risques, entreprises, POI — chargés côté client pour libérer les workers PHP-FPM */}
-          <ParcelleMainClientSections idParcelle={id} />
+          {/* Risques, entreprises, POI — SSR streamé via Suspense (cache DB sur risques + POI) */}
+          <Suspense>
+            <RisquesServerSection idParcelle={id} />
+          </Suspense>
+          <Suspense>
+            <EntreprisesServerSection idParcelle={id} />
+          </Suspense>
+          <Suspense>
+            <PoiServerSection idParcelle={id} />
+          </Suspense>
 
           {/* Historique chronologique */}
           {histEvents.length > 0 && (
@@ -548,8 +563,13 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
             </div>
           )}
 
-          {/* Copropriétés et permis — chargés côté client */}
-          <ParcelleSidebarClientSections idParcelle={id} />
+          {/* Copropriétés et permis — SSR streamé via Suspense */}
+          <Suspense>
+            <CoproprieteServerSection idParcelle={id} />
+          </Suspense>
+          <Suspense>
+            <PermisServerSection idParcelle={id} />
+          </Suspense>
 
           {/* Patrimoine ABF */}
           {patrimoine && !patrimoine.importRequired && (

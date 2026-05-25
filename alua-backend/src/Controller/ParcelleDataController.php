@@ -124,6 +124,18 @@ class ParcelleDataController extends AbstractController
     #[Route('/api/parcelles/{idParcelle}/risques', methods: ['GET'])]
     public function risques(string $idParcelle): JsonResponse
     {
+        // Cache hit — TTL 30 jours (données Géorisques très stables)
+        $cached = $this->connection->fetchAssociative(
+            "SELECT data FROM risques_cache
+             WHERE id_parcelle = :id AND fetched_at > NOW() - INTERVAL '30 days'",
+            ['id' => $idParcelle]
+        );
+        if ($cached) {
+            $response = $this->json(json_decode($cached['data'], true));
+            $response->headers->set('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+            return $response;
+        }
+
         $row = $this->connection->fetchAssociative(
             'SELECT commune_code, ST_X(centroid) AS lon, ST_Y(centroid) AS lat
              FROM parcelles WHERE id_parcelle = :id',
@@ -236,7 +248,18 @@ class ParcelleDataController extends AbstractController
              'type' => 'technologique'],
         ];
 
-        return $this->json(['risques' => $risques]);
+        $result = ['risques' => $risques];
+
+        $this->connection->executeStatement(
+            'INSERT INTO risques_cache (id_parcelle, data, fetched_at)
+             VALUES (:id, :data, NOW())
+             ON CONFLICT (id_parcelle) DO UPDATE SET data = EXCLUDED.data, fetched_at = NOW()',
+            ['id' => $idParcelle, 'data' => json_encode($result)]
+        );
+
+        $response = $this->json($result);
+        $response->headers->set('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+        return $response;
     }
 
     #[Route('/api/parcelles/{idParcelle}/patrimoine', methods: ['GET'])]

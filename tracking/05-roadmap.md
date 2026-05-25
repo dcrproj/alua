@@ -453,8 +453,8 @@ directement sur le VPS selon les TTL.
 > sont indexées par Google mais avec un délai (second wave JS rendering). À terme, les
 > remettre en SSR sans sacrifier la stabilité.
 
-- [ ] **Stocker résultats Géorisques et Overpass en PostgreSQL** avec TTL (ex: `parcelle_cache_risques`, `parcelle_cache_poi`) — le premier hit remplit le cache en arrière-plan, les suivants servent depuis la DB en <10ms
-- [ ] **Remettre les 5 sections en SSR via Suspense streaming** une fois le cache DB en place : `<Suspense fallback={<Skeleton />}><AsyncSection /></Suspense>` — contenu dans le HTML initial, zéro impact workers sur cache chaud
+- [x] **Stocker résultats Géorisques en PostgreSQL** avec TTL 30 jours (`risques_cache`) — `poi_cache` (Overpass) existait déjà. Premier hit → Géorisques ~2s + store, suivants → DB <10ms
+- [x] **Remettre les 5 sections en SSR via Suspense streaming** — `ParcelleServerSections.tsx` (async Server Components), `<Suspense>` dans `page.tsx`, `ParcelleClientSections.tsx` supprimé. Contenu dans le HTML initial, indexable par Google sans JS.
 - [ ] Vérifier l'indexation de ces sections dans Google Search Console (Coverage + Rich Results)
 
 ### 7.6 — Sitemaps adresses (vague 2)
