@@ -113,7 +113,10 @@ export default function MentionsLegalesPage() {
                 Sources de données
               </h2>
               <p className="mb-4">
-                Geocopia agrège des données publiques issues de sources officielles françaises. Ces données sont redistribuées conformément à leurs licences respectives (Licence Ouverte / Open Licence Etalab 2.0, sauf mention contraire).
+                Geocopia agrège des données publiques issues de sources officielles françaises. Ces données sont redistribuées conformément à leurs licences respectives (Licence Ouverte / Open Licence Etalab 2.0, sauf mention contraire).{' '}
+                <Link href="/open-data" className="hover:underline" style={{ color: 'var(--amber-600)' }}>
+                  Voir le détail des sources →
+                </Link>
               </p>
               <div className="space-y-3">
                 {[

@@ -218,7 +218,7 @@ export default function OpenDataPage() {
                   {/* Badge */}
                   <div
                     className="shrink-0 font-mono text-[11px] font-bold px-2 py-1 rounded"
-                    style={{ background: 'var(--slate-900)', color: 'var(--amber-400)', letterSpacing: '0.08em', marginTop: 2 }}
+                    style={{ background: 'var(--slate-900)', color: 'var(--amber-500)', letterSpacing: '0.08em', marginTop: 2 }}
                   >
                     {s.label}
                   </div>
@@ -257,7 +257,7 @@ export default function OpenDataPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded transition-opacity hover:opacity-75"
-                          style={{ background: 'var(--amber-50)', color: 'var(--amber-700)', border: '1px solid var(--amber-200)' }}
+                          style={{ background: 'var(--amber-50)', color: 'var(--amber-700)', border: '1px solid var(--amber-100)' }}
                         >
                           Documentation API ↗
                         </a>
