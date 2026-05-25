@@ -60,5 +60,23 @@ ${regions.map(s => `  <url><loc>${SITE_URL}/region/${s}</loc><changefreq>monthly
     }
   }
 
+  const adressesMatch = name.match(/^adresses-(\d{2,3})-(\d+)\.xml$/)
+  if (adressesMatch) {
+    const dept  = adressesMatch[1]
+    const batch = parseInt(adressesMatch[2], 10)
+    try {
+      const res = await fetch(`${API_URL}/api/sitemap/adresses/${dept}/${batch}`)
+      if (!res.ok) throw new Error()
+      const ids = await res.json() as string[]
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${ids.map(id => `  <url><loc>${SITE_URL}/adresse/${id}</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>`).join('\n')}
+</urlset>`
+      return new NextResponse(xml, { headers: { 'Content-Type': 'application/xml; charset=utf-8' } })
+    } catch {
+      return new NextResponse('error', { status: 500 })
+    }
+  }
+
   return new NextResponse('Not found', { status: 404 })
 }

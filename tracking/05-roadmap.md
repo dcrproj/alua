@@ -462,9 +462,9 @@ directement sur le VPS selon les TTL.
 > 25M d'URLs d'adresses non soumises. Crawl budget à ménager : soumettre par vague,
 > grandes villes d'abord (trafic longue traîne le plus fort).
 
-- [ ] SitemapController : endpoint `/api/sitemap/adresses/{dept}` (adresses par département)
-- [ ] Route Next.js `sitemap/adresses-{dept}.xml` (même pattern que parcelles)
-- [ ] Vague 2 : soumettre les 10 départements les plus peuplés (75, 69, 13, 33, 31…)
+- [x] SitemapController : endpoints `/api/sitemap/adresses/counts` + `/api/sitemap/adresses/{dept}/{batch}` (50 000 adresses/batch, filtré par `commune_code LIKE '{dept}%'`)
+- [x] Route Next.js `sitemap/adresses-{dept}-{batch}.xml` (même pattern que parcelles, priority 0.5)
+- [ ] Vague 2 : déployer + soumettre les 10 départements les plus peuplés dans Google Search Console (75, 69, 13, 33, 31, 06, 67, 76, 44, 34)
 - [ ] Vague 3 : soumettre le reste progressivement (1 dept/semaine via cron)
 
 ### 7.7 — Contenu éditorial (longue traîne + backlinks)

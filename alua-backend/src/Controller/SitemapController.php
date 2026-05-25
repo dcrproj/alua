@@ -7,6 +7,7 @@ namespace App\Controller;
 use Doctrine\DBAL\Connection;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 
 class SitemapController extends AbstractController
@@ -69,5 +70,48 @@ class SitemapController extends AbstractController
             ['offset' => $batch * self::BATCH_SIZE]
         );
         return $this->json($rows);
+    }
+
+    /**
+     * Returns batch counts for a list of departments.
+     * Query param `depts` = comma-separated dept codes (e.g. "75,69,13").
+     */
+    #[Route('/api/sitemap/adresses/counts', methods: ['GET'])]
+    public function adressesCounts(Request $request): JsonResponse
+    {
+        $raw   = $request->query->getString('depts', '75,69,13,33,31,06,67,76,44,34');
+        $depts = array_filter(array_map('trim', explode(',', $raw)));
+
+        $result = [];
+        foreach ($depts as $dept) {
+            $count = (int) $this->connection->fetchOne(
+                "SELECT COUNT(*) FROM addresses WHERE commune_code LIKE :prefix",
+                ['prefix' => $dept . '%']
+            );
+            $result[$dept] = [
+                'count'   => $count,
+                'batches' => (int) ceil($count / self::BATCH_SIZE),
+            ];
+        }
+
+        $response = $this->json($result);
+        $response->headers->set('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+        return $response;
+    }
+
+    #[Route('/api/sitemap/adresses/{dept}/{batch}', methods: ['GET'], requirements: ['dept' => '\d{2,3}', 'batch' => '\d+'])]
+    public function adresses(string $dept, int $batch): JsonResponse
+    {
+        $rows = $this->connection->fetchFirstColumn(
+            'SELECT ban_id FROM addresses
+             WHERE commune_code LIKE :prefix
+             ORDER BY ban_id
+             LIMIT ' . self::BATCH_SIZE . ' OFFSET :offset',
+            ['prefix' => $dept . '%', 'offset' => $batch * self::BATCH_SIZE]
+        );
+
+        $response = $this->json($rows);
+        $response->headers->set('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+        return $response;
     }
 }
