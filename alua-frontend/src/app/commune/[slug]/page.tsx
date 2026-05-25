@@ -414,12 +414,17 @@ export default async function CommunePage({ params }: { params: Promise<{ slug: 
               <h2 className="text-xl font-semibold mb-5" style={{ color: 'var(--slate-900)', letterSpacing: '-0.005em' }}>
                 Questions fréquentes
               </h2>
-              <div className="space-y-0">
+              <div>
                 {faqItems.map((f, i) => (
-                  <div key={i} className="py-4 border-t" style={{ borderColor: 'var(--slate-200)' }}>
-                    <p className="font-medium text-sm mb-1.5" style={{ color: 'var(--slate-900)' }}>{f.q}</p>
-                    <p className="text-sm leading-relaxed" style={{ color: 'var(--slate-600)' }}>{f.a}</p>
-                  </div>
+                  <details key={i} className="group border-t" style={{ borderColor: 'var(--slate-200)' }}>
+                    <summary className="flex items-center justify-between gap-4 py-4 cursor-pointer list-none"
+                      style={{ color: 'var(--slate-900)' }}>
+                      <span className="font-medium text-sm">{f.q}</span>
+                      <span className="shrink-0 text-lg leading-none transition-transform group-open:rotate-45"
+                        style={{ color: 'var(--slate-400)' }}>+</span>
+                    </summary>
+                    <p className="pb-4 text-sm leading-relaxed" style={{ color: 'var(--slate-600)' }}>{f.a}</p>
+                  </details>
                 ))}
               </div>
             </section>
