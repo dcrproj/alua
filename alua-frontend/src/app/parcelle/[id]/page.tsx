@@ -171,6 +171,35 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
   const dpeDate = fmtDate(dpes.updatedAt)
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://geocopia.fr'
+
+  const realEstateListings = transactions.items
+    .filter(t => t.valeurFonciere && t.date)
+    .slice(0, 10)
+    .map(t => {
+      const lot = mainLot(t.lots ?? [])
+      const surf = lot?.surfaceBati ?? lot?.surfaceCarrez
+      const pm2 = prixM2(t)
+      const typeLabel = lot?.typeLocal ?? 'Bien immobilier'
+      return {
+        '@context': 'https://schema.org',
+        '@type': 'RealEstateListing',
+        name: [typeLabel, adresseLabel ?? `Parcelle ${id}`, communeLabel].filter(Boolean).join(' — '),
+        description: `Vente ${typeLabel.toLowerCase()}${surf ? ` de ${surf} m²` : ''} à ${communeLabel} pour ${t.valeurFonciere!.toLocaleString('fr-FR')} €${pm2 ? ` (${pm2.toLocaleString('fr-FR')} €/m²)` : ''}.`,
+        url: `${siteUrl}/parcelle/${id}`,
+        datePosted: t.date,
+        offers: { '@type': 'Offer', price: String(t.valeurFonciere!), priceCurrency: 'EUR' },
+        ...(addr ? {
+          address: {
+            '@type': 'PostalAddress',
+            streetAddress: adresseLabel ?? undefined,
+            postalCode: addr.codePostal ?? undefined,
+            addressLocality: addr.commune ?? communeLabel,
+            addressCountry: 'FR',
+          },
+        } : {}),
+      }
+    })
+
   const jsonLd = [
     {
       '@context': 'https://schema.org',
@@ -204,6 +233,7 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
         },
       } : {}),
     },
+    ...realEstateListings,
   ]
 
   return (

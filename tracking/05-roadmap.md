@@ -425,7 +425,7 @@ directement sur le VPS selon les TTL.
 > Les rich snippets améliorent le CTR dans les SERPs. Les transactions DVF sont des données
 > structurées parfaites pour `RealEstateListing`.
 
-- [ ] `RealEstateListing` + `Offer` pour chaque transaction DVF sur les fiches (prix, date, surface)
+- [x] `RealEstateListing` + `Offer` pour chaque transaction DVF sur les fiches (prix, date, surface) — fiche parcelle (10 tx) + fiche commune (20 tx)
 - [ ] `GeoCoordinates` sur les fiches adresse et parcelle (lat/lng depuis PostGIS)
 - [ ] `FAQPage` sur les fiches commune (ex: "Quel est le prix moyen au m² à Toulouse ?")
 - [ ] `Dataset` en JSON-LD sur la page d'accueil (référence les sources ouvertes utilisées)

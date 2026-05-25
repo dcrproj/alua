@@ -84,6 +84,30 @@ export default async function CommunePage({ params }: { params: Promise<{ slug: 
     { name: nom, item: `${siteUrl}/commune/${canonicalSlug}` },
   ]
 
+  const realEstateListings = commune.transactions
+    .filter(t => t.valeurFonciere && t.date)
+    .slice(0, 20)
+    .map(t => {
+      const surf = t.surfaceBati ?? t.surfaceCarrez
+      const pm2 = surf && surf > 0 && t.valeurFonciere ? Math.round(t.valeurFonciere / surf) : null
+      const typeLabel = t.typeLocal ?? 'Bien immobilier'
+      return {
+        '@context': 'https://schema.org',
+        '@type': 'RealEstateListing',
+        name: [typeLabel, t.adresse ?? nom].filter(Boolean).join(' — '),
+        description: `Vente ${typeLabel.toLowerCase()}${surf ? ` de ${surf} m²` : ''} à ${nom} pour ${t.valeurFonciere!.toLocaleString('fr-FR')} €${pm2 ? ` (${pm2.toLocaleString('fr-FR')} €/m²)` : ''}.`,
+        url: t.idParcelle ? `${siteUrl}/parcelle/${t.idParcelle}` : `${siteUrl}/commune/${canonicalSlug}`,
+        datePosted: t.date,
+        offers: { '@type': 'Offer', price: String(t.valeurFonciere!), priceCurrency: 'EUR' },
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: t.adresse ?? undefined,
+          addressLocality: nom,
+          addressCountry: 'FR',
+        },
+      }
+    })
+
   const jsonLd = [
     {
       '@context': 'https://schema.org',
@@ -98,6 +122,7 @@ export default async function CommunePage({ params }: { params: Promise<{ slug: 
       description: `Données immobilières de ${nom} : ${commune.nbTransactions.toLocaleString('fr-FR')} transactions DVF${commune.prixMedianM2 ? `, prix médian ${Math.round(commune.prixMedianM2).toLocaleString('fr-FR')} €/m²` : ''}.`,
       url: `${siteUrl}/commune/${canonicalSlug}`,
     },
+    ...realEstateListings,
   ]
 
   const evoFiltered = commune.evolutionPrix.filter(d => d.prixMedianM2).sort((a, b) => a.annee - b.annee)
