@@ -269,37 +269,6 @@ export default function OpenDataPage() {
             ))}
           </div>
 
-          {/* CTA réutilisateurs */}
-          <div
-            className="mt-12 mb-0 rounded-xl p-8"
-            style={{ background: 'var(--slate-50)', border: '1px solid var(--slate-200)' }}
-          >
-            <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--slate-900)', fontFamily: 'var(--font-display)' }}>
-              Vous réutilisez ces données ?
-            </h2>
-            <p className="text-sm mb-5" style={{ color: 'var(--slate-600)', lineHeight: 1.7 }}>
-              Si vous développez un projet basé sur les mêmes sources ouvertes, pensez à vous référencer comme réutilisateur sur data.gouv.fr — cela renforce la visibilité de l&apos;open data et de vos projets. Nous l&apos;avons fait pour Geocopia.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <a
-                href="https://www.data.gouv.fr/fr/reuses/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded transition-opacity hover:opacity-80"
-                style={{ background: 'var(--slate-900)', color: 'white' }}
-              >
-                Réutilisateurs data.gouv.fr ↗
-              </a>
-              <Link
-                href="/mentions-legales"
-                prefetch={false}
-                className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded transition-opacity hover:opacity-80"
-                style={{ background: 'white', color: 'var(--slate-700)', border: '1px solid var(--slate-200)' }}
-              >
-                Mentions légales
-              </Link>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}

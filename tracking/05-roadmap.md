@@ -472,9 +472,7 @@ directement sur le VPS selon les TTL.
 > Les fiches programmatiques captent la longue traîne transactionnelle.
 > Le contenu éditorial capte les requêtes informationnelles et génère des backlinks.
 
-- [ ] Page `/guides/lire-un-dpe` : explication étiquettes A–G, impact sur le prix
-- [ ] Page `/guides/comprendre-le-cadastre` : qu'est-ce qu'une parcelle, comment la trouver
-- [ ] Page `/guides/dvf-transactions` : comment interpréter les données de vente
+- [ ] ~~Guides éditoriaux~~ — **différé post-V1** : nécessite une expertise rédactionnelle métier (DPE, cadastre, DVF) que l'équipe n'a pas encore
 - [ ] Référencement sur `data.gouv.fr` (réutilisateurs des données BAN/DVF/DPE) — lien dans /open-data
 - [x] Page `/open-data` : crédits sources + liens retour vers data.gouv.fr (backlinks institutionnels) — 9 sources, Schema.org DataCatalog, CTA réutilisateurs
 
