@@ -20,4 +20,7 @@ npm run build
 echo "[3/3] PM2 restart…"
 pm2 restart geocopia-front
 
-echo "Done — frontend déployé."
+echo "[4/4] Warm-up ISR en background…"
+nohup bash "$(dirname "$0")/warmup.sh" 500 >> /tmp/warmup.log 2>&1 &
+
+echo "Done — frontend déployé. Warm-up en cours (voir /tmp/warmup.log)."

@@ -25,6 +25,20 @@ class SitemapController extends AbstractController
         return $this->json($rows);
     }
 
+    #[Route('/api/sitemap/communes/top', methods: ['GET'])]
+    public function communesTop(Request $request): JsonResponse
+    {
+        $n = min(max(1, (int) $request->query->get('n', 500)), 5000);
+        $rows = $this->connection->fetchFirstColumn(
+            'SELECT slug FROM communes
+             WHERE slug IS NOT NULL
+             ORDER BY population DESC NULLS LAST
+             LIMIT :n',
+            ['n' => $n]
+        );
+        return $this->json($rows);
+    }
+
     #[Route('/api/admin/regions', methods: ['GET'])]
     public function regionsList(): JsonResponse
     {

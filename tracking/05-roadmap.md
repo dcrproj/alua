@@ -444,7 +444,7 @@ directement sur le VPS selon les TTL.
 - [x] Fiche parcelle : 5 endpoints lents (risques, entreprises, POI, copropriétés, permis) déplacés en client-side pour libérer les workers PHP-FPM pendant le SSR
 - [x] `prefetch={false}` sur tous les `<Link>` des fiches (parcelle, commune, département, région) — stoppe la tempête de RSC prefetches qui épuisait le pool PHP-FPM en cascade
 - [x] Augmenter PHP-FPM `pm.max_children = 50` sur le VPS (24 GB RAM → très confortable)
-- [ ] Script de warm-up post-deploy : GET sur les 500 fiches les plus consultées
+- [x] Script de warm-up post-deploy : GET sur les 500 fiches les plus consultées — `scripts/warmup.sh`, lancé en background par `deploy-frontend.sh`, log dans `/tmp/warmup.log`
 - [ ] `EXPLAIN ANALYZE` sur les requêtes PostGIS lentes (fiche parcelle : ST_DWithin KNN)
 
 ### 7.5b — Récupération SEO (suite déplacement client-side)
