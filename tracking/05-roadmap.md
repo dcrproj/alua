@@ -443,7 +443,7 @@ directement sur le VPS selon les TTL.
 - [x] `generateStaticParams` sur régions (13) et départements (96) — élimine l'ISR cold sur ces pages
 - [x] Fiche parcelle : 5 endpoints lents (risques, entreprises, POI, copropriétés, permis) déplacés en client-side pour libérer les workers PHP-FPM pendant le SSR
 - [x] `prefetch={false}` sur tous les `<Link>` des fiches (parcelle, commune, département, région) — stoppe la tempête de RSC prefetches qui épuisait le pool PHP-FPM en cascade
-- [ ] Augmenter PHP-FPM `pm.max_children = 50` sur le VPS (24 GB RAM → très confortable)
+- [x] Augmenter PHP-FPM `pm.max_children = 50` sur le VPS (24 GB RAM → très confortable)
 - [ ] Script de warm-up post-deploy : GET sur les 500 fiches les plus consultées
 - [ ] `EXPLAIN ANALYZE` sur les requêtes PostGIS lentes (fiche parcelle : ST_DWithin KNN)
 
@@ -475,8 +475,8 @@ directement sur le VPS selon les TTL.
 - [ ] Page `/guides/lire-un-dpe` : explication étiquettes A–G, impact sur le prix
 - [ ] Page `/guides/comprendre-le-cadastre` : qu'est-ce qu'une parcelle, comment la trouver
 - [ ] Page `/guides/dvf-transactions` : comment interpréter les données de vente
-- [ ] Référencement sur `data.gouv.fr` (réutilisateurs des données BAN/DVF/DPE)
-- [ ] Page `/open-data` : crédits sources + liens retour vers data.gouv.fr (backlinks institutionnels)
+- [ ] Référencement sur `data.gouv.fr` (réutilisateurs des données BAN/DVF/DPE) — lien dans /open-data
+- [x] Page `/open-data` : crédits sources + liens retour vers data.gouv.fr (backlinks institutionnels) — 9 sources, Schema.org DataCatalog, CTA réutilisateurs
 
 ---
 
