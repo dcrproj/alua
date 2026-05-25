@@ -24,7 +24,7 @@ export default function GeocopiaHeader({ onSearchSelect, activeRoute }: Props) {
       }}
     >
       {/* Logo — left */}
-      <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', flexShrink: 0 }}>
+      <Link href="/" prefetch={false} style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', flexShrink: 0 }}>
         <div
           style={{
             width: 28, height: 28, borderRadius: 4,
@@ -61,6 +61,7 @@ export default function GeocopiaHeader({ onSearchSelect, activeRoute }: Props) {
       <nav style={{ display: 'flex', gap: 2, marginLeft: 'auto', flexShrink: 0 }}>
         <Link
           href="/regions"
+          prefetch={false}
           style={{
             display: 'inline-flex', alignItems: 'center',
             height: 30, padding: '0 12px',
@@ -86,6 +87,7 @@ export default function GeocopiaHeader({ onSearchSelect, activeRoute }: Props) {
         ) : (
           <Link
             href="/carte"
+            prefetch={false}
             style={{
               display: 'inline-flex', alignItems: 'center',
               height: 30, padding: '0 12px',

@@ -430,17 +430,32 @@ directement sur le VPS selon les TTL.
 - [ ] `FAQPage` sur les fiches commune (ex: "Quel est le prix moyen au m² à Toulouse ?")
 - [ ] `Dataset` en JSON-LD sur la page d'accueil (référence les sources ouvertes utilisées)
 
-### 7.5 — Performance Core Web Vitals
+### 7.5 — Performance & Stabilité (anti-503)
 
 > TTFB trop lent sur les fiches à froid = risque Core Web Vitals = pénalité ranking.
 > Noté en mémoire projet depuis Phase 6.2.
 
 - [x] Timeouts agressifs sur les appels API externes (Géorisques 5s, Overpass 10s) — évite l'épuisement workers PHP-FPM
 - [x] Index Doctrine `CONCURRENTLY` (sans bloquer les tables) — migration `Version20260525100000`
-- [x] Script `tune-vps-root.sh` : PHP-FPM `pm.max_children = 30` + Nginx `fastcgi_cache` (à exécuter manuellement en tant que debian)
-- [ ] `generateStaticParams` sur les 2 000 communes les plus peuplées (pré-rendu ISR)
+- [x] Script `tune-vps-root.sh` : PHP-FPM `pm.max_children = 30` → monter à 50 sur VPS
+- [x] Symfony HttpCache en prod (`index.php`) + `ApiCacheControlSubscriber` (TTL par endpoint) — cache hits ~5ms
+- [x] `DatabaseTimeoutSubscriber` : `SET statement_timeout = 15000` — libère les workers PHP-FPM en 15s max
+- [x] `generateStaticParams` sur régions (13) et départements (96) — élimine l'ISR cold sur ces pages
+- [x] Fiche parcelle : 5 endpoints lents (risques, entreprises, POI, copropriétés, permis) déplacés en client-side pour libérer les workers PHP-FPM pendant le SSR
+- [x] `prefetch={false}` sur tous les `<Link>` des fiches (parcelle, commune, département, région) — stoppe la tempête de RSC prefetches qui épuisait le pool PHP-FPM en cascade
+- [ ] Augmenter PHP-FPM `pm.max_children = 50` sur le VPS (24 GB RAM → très confortable)
 - [ ] Script de warm-up post-deploy : GET sur les 500 fiches les plus consultées
 - [ ] `EXPLAIN ANALYZE` sur les requêtes PostGIS lentes (fiche parcelle : ST_DWithin KNN)
+
+### 7.5b — Récupération SEO (suite déplacement client-side)
+
+> Les 5 sections déplacées en client-side (risques, entreprises, POI, copropriétés, permis)
+> sont indexées par Google mais avec un délai (second wave JS rendering). À terme, les
+> remettre en SSR sans sacrifier la stabilité.
+
+- [ ] **Stocker résultats Géorisques et Overpass en PostgreSQL** avec TTL (ex: `parcelle_cache_risques`, `parcelle_cache_poi`) — le premier hit remplit le cache en arrière-plan, les suivants servent depuis la DB en <10ms
+- [ ] **Remettre les 5 sections en SSR via Suspense streaming** une fois le cache DB en place : `<Suspense fallback={<Skeleton />}><AsyncSection /></Suspense>` — contenu dans le HTML initial, zéro impact workers sur cache chaud
+- [ ] Vérifier l'indexation de ces sections dans Google Search Console (Coverage + Rich Results)
 
 ### 7.6 — Sitemaps adresses (vague 2)
 
