@@ -1,11 +1,12 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { Euro, Flame, AlertTriangle, Briefcase, MapPin, History } from 'lucide-react'
-import type { Parcelle, ParcelleTransaction, ParcelleTransactionLot, ParcelleDpe, SectionData, Commune, ParcelleRisques, RisqueDisplay, ParcellePatrimoine, BatimentBdnb, Copropriete, SitadelPermis, SireneEtablissement, ParcellePoi, PoiCategory } from '@/types/api'
+import { Euro, Flame, History } from 'lucide-react'
+import type { Parcelle, ParcelleTransaction, ParcelleTransactionLot, ParcelleDpe, SectionData, Commune, ParcellePatrimoine, BatimentBdnb } from '@/types/api'
 import { formatPrice, formatDate, DpeBadge, PrixEvolutionChart, DpeDistributionBar } from '@/components/fiche'
 import ParcelleHeroMapClient from './ParcelleHeroMapClient'
 import ParcelleTocNav from './ParcelleTocNav'
 import ParcelleFicheHeader from './ParcelleFicheHeader'
+import { ParcelleMainClientSections, ParcelleSidebarClientSections } from './ParcelleClientSections'
 
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL!
 
@@ -39,167 +40,6 @@ function SectionHeader({ kind, icon, title, count, source }: {
       </h2>
       {source && <span className="text-sm" style={{ color: 'var(--slate-500)' }}>{source}</span>}
     </div>
-  )
-}
-
-// ─── Risk helpers ────────────────────────────────────────────────────────────
-
-const NIVEAU_COLORS: Record<string, string> = {
-  'Existant':           'text-orange-700 font-semibold',
-  'Faible':             'text-yellow-700',
-  'Moyen':              'text-orange-600 font-semibold',
-  'Modéré':             'text-orange-600 font-semibold',
-  'Significatif':       'text-red-700 font-semibold',
-  'Important':          'text-red-700 font-semibold',
-  'Très important':     'text-red-800 font-bold',
-  'Fort':               'text-red-700 font-semibold',
-  'Pas de risque connu':'text-green-700',
-  'Non renseigné':      'text-muted-foreground/50',
-}
-
-function niveauColor(n: string) { return NIVEAU_COLORS[n] ?? 'text-muted-foreground' }
-
-function RisqueTableRow({ r }: { r: RisqueDisplay }) {
-  return (
-    <tr className="border-b last:border-0" style={{ borderColor: 'var(--slate-100)' }}>
-      <td className="py-3 pr-4 text-sm" style={{ color: 'var(--slate-700)' }}>{r.libelle}</td>
-      <td className={`py-3 pr-4 text-sm text-left ${niveauColor(r.adresse)}`}>{r.adresse}</td>
-      <td className={`py-3 text-sm text-left ${niveauColor(r.commune)}`}>{r.commune}</td>
-    </tr>
-  )
-}
-
-// ─── Copropriété section (sidebar) ───────────────────────────────────────────
-
-function SidebarCopropriete({ coproprietes }: { coproprietes: SectionData<Copropriete> }) {
-  if (!coproprietes.items.length) return null
-  return (
-    <div className="pt-5" style={{ borderTop: '1px solid var(--slate-200)' }}>
-      <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--slate-900)', fontFamily: 'var(--font-body)' }}>
-        Copropriété{coproprietes.items.length > 1 ? 's' : ''}{' '}
-        <span className="font-normal text-xs" style={{ color: 'var(--slate-500)' }}>RNIC</span>
-      </h4>
-      {coproprietes.items.map(c => (
-        <div key={c.noImmatriculation} className="space-y-2 mb-4 last:mb-0">
-          <div>
-            <p className="text-sm font-semibold" style={{ color: 'var(--slate-900)' }}>{c.nom ?? c.noImmatriculation}</p>
-            <p className="font-mono text-[11px]" style={{ color: 'var(--slate-500)' }}>{c.noImmatriculation}</p>
-          </div>
-          <dl className="space-y-1 text-sm">
-            {c.representantLegal && (
-              <div className="flex justify-between gap-3">
-                <dt style={{ color: 'var(--slate-500)' }}>Syndic</dt>
-                <dd className="text-right" style={{ color: 'var(--slate-800)' }}>{c.representantLegal}{c.typeSyndic ? ` · ${c.typeSyndic}` : ''}</dd>
-              </div>
-            )}
-            {c.nbLotsTotal != null && (
-              <div className="flex justify-between gap-3">
-                <dt style={{ color: 'var(--slate-500)' }}>Lots total</dt>
-                <dd style={{ color: 'var(--slate-800)' }}>{c.nbLotsTotal}</dd>
-              </div>
-            )}
-            {c.nbLotsHabitation != null && (
-              <div className="flex justify-between gap-3">
-                <dt style={{ color: 'var(--slate-500)' }}>Habitation</dt>
-                <dd style={{ color: 'var(--slate-800)' }}>{c.nbLotsHabitation}</dd>
-              </div>
-            )}
-            {c.nbLotsStationnement != null && (
-              <div className="flex justify-between gap-3">
-                <dt style={{ color: 'var(--slate-500)' }}>Stationnement</dt>
-                <dd style={{ color: 'var(--slate-800)' }}>{c.nbLotsStationnement}</dd>
-              </div>
-            )}
-            {c.dateReglement && (
-              <div className="flex justify-between gap-3">
-                <dt style={{ color: 'var(--slate-500)' }}>Règlement</dt>
-                <dd style={{ color: 'var(--slate-800)' }}>{formatDate(c.dateReglement)}</dd>
-              </div>
-            )}
-          </dl>
-        </div>
-      ))}
-      <p className="text-[11px] mt-2" style={{ color: 'var(--slate-400)' }}>Source : RNIC — data.gouv.fr</p>
-    </div>
-  )
-}
-
-// ─── Permis section (sidebar) ────────────────────────────────────────────────
-
-const ETAT_COLORS: Record<string, string> = {
-  'Autorisé': 'bg-blue-50 text-blue-700',
-  'Commencé': 'bg-orange-50 text-orange-700',
-  'Achevé':   'bg-green-50 text-green-700',
-  'Caduc':    'bg-gray-100 text-gray-500',
-  'Annulé':   'bg-gray-100 text-gray-500',
-  'Refusé':   'bg-red-50 text-red-700',
-}
-
-function SidebarPermis({ permis }: { permis: SectionData<SitadelPermis> }) {
-  if (!permis.items.length) return null
-  return (
-    <div className="pt-5" style={{ borderTop: '1px solid var(--slate-200)' }}>
-      <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--slate-900)', fontFamily: 'var(--font-body)' }}>
-        Autorisations{' '}
-        <span className="font-normal text-xs" style={{ color: 'var(--slate-500)' }}>Sitadel</span>
-      </h4>
-      <div className="space-y-3">
-        {permis.items.map(p => (
-          <div key={p.numDau}>
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-sm" style={{ color: 'var(--slate-800)' }}>{p.natureProjetLibelle ?? p.typeDauLibelle}</p>
-              {p.etatDauLibelle && (
-                <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full shrink-0 ${ETAT_COLORS[p.etatDauLibelle] ?? 'bg-gray-100 text-gray-600'}`}>
-                  {p.etatDauLibelle}
-                </span>
-              )}
-            </div>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--slate-500)' }}>
-              {formatDate(p.dateAutorisation ?? p.dateDaact)}
-              {(p.nbLogementsCrees ?? 0) > 0 && ` · ${p.nbLogementsCrees} lgmt`}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ─── POI section ─────────────────────────────────────────────────────────────
-
-function PoiSection({ poi }: { poi: ParcellePoi }) {
-  if (!poi.categories.length) return null
-  return (
-    <section id="section-proximite" style={{ marginBottom: 56 }}>
-      <SectionHeader
-        kind="proximite"
-        icon={<MapPin size={18} />}
-        title="À proximité"
-        source="OpenStreetMap"
-      />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-6">
-        {poi.categories.map((cat: PoiCategory) => (
-          <div key={cat.label}>
-            <h4
-              className="text-[11px] font-semibold uppercase tracking-widest pb-2 mb-1"
-              style={{ color: 'var(--slate-500)', borderBottom: '1px solid var(--slate-200)' }}
-            >
-              {cat.label}
-            </h4>
-            {cat.items.map((item, i) => (
-              <div
-                key={i}
-                className="flex justify-between py-2 text-sm"
-                style={{ borderTop: i ? `1px solid var(--slate-100)` : 'none' }}
-              >
-                <span style={{ color: 'var(--slate-700)' }}>{item.name ?? item.type}</span>
-                <span className="tabular-nums" style={{ color: 'var(--slate-600)' }}>{item.distM} m</span>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </section>
   )
 }
 
@@ -251,18 +91,13 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
   const { id } = await params
   const communeCode = id.substring(0, 5)
 
-  const [parcelleRes, transactionsRes, dpesRes, communeRes, risquesRes, patrimoineRes, batimentRes, coproprieteRes, permisRes, entreprisesRes, poiRes] = await Promise.all([
+  const [parcelleRes, transactionsRes, dpesRes, communeRes, patrimoineRes, batimentRes] = await Promise.all([
     fetch(`${API_URL}/api/parcelles/${id}`, { headers: { Accept: 'application/ld+json' }, next: { revalidate: 3600 } }),
     fetch(`${API_URL}/api/parcelles/${id}/transactions`, { next: { revalidate: 3600 } }),
     fetch(`${API_URL}/api/parcelles/${id}/dpes`, { next: { revalidate: 3600 } }),
     fetch(`${API_URL}/api/communes/${communeCode}`, { headers: { Accept: 'application/ld+json' }, next: { revalidate: 3600 } }),
-    fetch(`${API_URL}/api/parcelles/${id}/risques`, { next: { revalidate: 86400 } }),
     fetch(`${API_URL}/api/parcelles/${id}/patrimoine`, { next: { revalidate: 86400 } }),
     fetch(`${API_URL}/api/parcelles/${id}/batiment`, { next: { revalidate: 86400 } }),
-    fetch(`${API_URL}/api/parcelles/${id}/coproprietes`, { next: { revalidate: 86400 } }),
-    fetch(`${API_URL}/api/parcelles/${id}/permis`, { next: { revalidate: 86400 } }),
-    fetch(`${API_URL}/api/parcelles/${id}/entreprises`, { next: { revalidate: 86400 } }),
-    fetch(`${API_URL}/api/parcelles/${id}/poi`, { next: { revalidate: 7776000 } }),
   ])
 
   if (!parcelleRes.ok) notFound()
@@ -271,13 +106,8 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
   const transactions: SectionData<ParcelleTransaction> = transactionsRes.ok ? await transactionsRes.json() : { items: [], updatedAt: null }
   const dpes: SectionData<ParcelleDpe> = dpesRes.ok ? await dpesRes.json() : { items: [], updatedAt: null }
   const commune: Commune | null = communeRes.ok ? await communeRes.json() : null
-  const risques: ParcelleRisques | null = risquesRes.ok ? await risquesRes.json() : null
   const patrimoine: ParcellePatrimoine | null = patrimoineRes.ok ? await patrimoineRes.json() : null
   const batiments: SectionData<BatimentBdnb> = batimentRes.ok ? await batimentRes.json() : { items: [], updatedAt: null }
-  const coproprietes: SectionData<Copropriete> = coproprieteRes.ok ? await coproprieteRes.json() : { items: [], updatedAt: null }
-  const permis: SectionData<SitadelPermis> = permisRes.ok ? await permisRes.json() : { items: [], updatedAt: null }
-  const etablissements: SectionData<SireneEtablissement> = entreprisesRes.ok ? await entreprisesRes.json() : { items: [], updatedAt: null }
-  const poi: ParcellePoi = poiRes.ok ? await poiRes.json() : { categories: [], fetchedAt: null }
 
   const addr = parcelle.address
   const adresseLabel = addr ? [addr.numero, addr.voie].filter(Boolean).join(' ') : null
@@ -306,8 +136,8 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
   }
   const parcelleSummary = summaryParts.join(' ')
 
-  // ── Timeline historique ──────────────────────────────────────────────────────
-  type HistEvent = { date: string; kind: 'VENTE' | 'DPE' | 'PERMIS'; label: string; detail: string | null }
+  // ── Timeline historique (transactions + DPE uniquement) ───────────────────
+  type HistEvent = { date: string; kind: 'VENTE' | 'DPE'; label: string; detail: string | null }
   const histEvents: HistEvent[] = [
     ...transactions.items.filter(t => t.date).map(t => {
       const lot = mainLot(t.lots ?? [])
@@ -325,12 +155,6 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
       kind: 'DPE' as const,
       label: `DPE ${d.etiquetteDpe ?? ''}`,
       detail: [d.typeBatiment, d.surface ? `${d.surface} m²` : null].filter(Boolean).join(' · '),
-    })),
-    ...permis.items.filter(p => p.dateAutorisation).map(p => ({
-      date: p.dateAutorisation!,
-      kind: 'PERMIS' as const,
-      label: p.natureProjetLibelle ?? p.typeDauLibelle ?? 'Permis',
-      detail: p.etatDauLibelle ?? null,
     })),
   ].sort((a, b) => b.date.localeCompare(a.date))
 
@@ -659,115 +483,8 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
             )}
           </section>
 
-          {/* Risques */}
-          {risques && risques.risques.length > 0 && (
-            <section id="section-risques" style={{ marginBottom: 56 }}>
-              <SectionHeader
-                kind="risques"
-                icon={<AlertTriangle size={18} />}
-                title="Risques"
-                source={
-                  <a href="https://www.georisques.gouv.fr" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ textDecorationColor: 'var(--slate-300)' }}>
-                    georisques.gouv.fr
-                  </a>
-                }
-              />
-              <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: 14 }}>
-                <thead>
-                  <tr>
-                    <th />
-                    <th
-                      className="pb-3 text-left text-sm font-medium"
-                      style={{ color: 'var(--slate-500)', width: 180 }}
-                    >
-                      À l&apos;adresse
-                    </th>
-                    <th
-                      className="pb-3 text-left text-sm font-medium"
-                      style={{ color: 'var(--slate-500)', width: 180 }}
-                    >
-                      Sur la commune
-                    </th>
-                  </tr>
-                  <tr>
-                    <td colSpan={3}>
-                      <div
-                        className="pt-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.08em]"
-                        style={{ color: 'var(--slate-500)', borderTop: '1px solid var(--slate-200)' }}
-                      >
-                        Risques naturels
-                      </div>
-                    </td>
-                  </tr>
-                </thead>
-                <tbody>
-                  {risques.risques.filter(r => r.type === 'naturel').map(r => (
-                    <RisqueTableRow key={r.id} r={r} />
-                  ))}
-                  <tr>
-                    <td
-                      colSpan={3}
-                      className="pt-5 pb-2 text-[11px] font-semibold uppercase tracking-[0.08em]"
-                      style={{ color: 'var(--slate-500)' }}
-                    >
-                      Risques technologiques
-                    </td>
-                  </tr>
-                  {risques.risques.filter(r => r.type === 'technologique').map(r => (
-                    <RisqueTableRow key={r.id} r={r} />
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          )}
-
-          {/* Établissements SIRENE */}
-          {etablissements.items.length > 0 && (
-            <section id="section-entreprises" style={{ marginBottom: 56 }}>
-              <SectionHeader
-                kind="entreprises"
-                icon={<Briefcase size={18} />}
-                title="Établissements à proximité"
-                count={etablissements.items.length}
-                source="SIRENE · INSEE · rayon 50 m"
-              />
-              <div>
-                {etablissements.items.map(e => (
-                  <a
-                    key={e.siret}
-                    href={`https://annuaire-entreprises.data.gouv.fr/etablissement/${e.siret}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block py-3 border-t hover:opacity-75 transition-opacity"
-                    style={{
-                      borderColor: 'var(--slate-100)',
-                      display: 'grid',
-                      gridTemplateColumns: '1fr auto auto',
-                      gap: 16,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <div>
-                      <span className="text-sm font-medium" style={{ color: 'var(--slate-900)' }}>{e.nom ?? '—'}</span>
-                      <span className="text-sm ml-2.5" style={{ color: 'var(--slate-500)' }}>
-                        {e.nafLibelle ?? e.nafCode}
-                        {e.nafCode && <span className="font-mono text-xs ml-1.5">{e.nafCode}</span>}
-                      </span>
-                    </div>
-                    <div className="text-xs" style={{ color: 'var(--slate-500)' }}>
-                      {e.estSiege ? 'Siège' : '—'}
-                    </div>
-                    <div className="text-sm text-right" style={{ color: 'var(--slate-600)', width: 90 }}>
-                      {e.dateCreation && new Date(e.dateCreation).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* À proximité (OSM) */}
-          <PoiSection poi={poi} />
+          {/* Risques, entreprises, POI — chargés côté client pour libérer les workers PHP-FPM */}
+          <ParcelleMainClientSections idParcelle={id} />
 
           {/* Historique chronologique */}
           {histEvents.length > 0 && (
@@ -789,13 +506,11 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
                     </span>
                     {e.kind === 'VENTE' ? (
                       <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--slate-900)' }}>{e.label}</span>
-                    ) : e.kind === 'DPE' ? (
+                    ) : (
                       <span className="flex items-center gap-1.5 text-sm">
                         <DpeBadge label={e.label.slice(-1)} />
                         <span style={{ color: 'var(--slate-800)' }}>{e.label}</span>
                       </span>
-                    ) : (
-                      <span className="text-sm" style={{ color: 'var(--slate-700)' }}>{e.label}</span>
                     )}
                     <span className="text-sm" style={{ color: 'var(--slate-500)' }}>{e.detail}</span>
                   </div>
@@ -832,15 +547,8 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
             </div>
           )}
 
-          {/* Copropriétés RNIC */}
-          <SidebarCopropriete coproprietes={coproprietes} />
-
-          {/* Permis Sitadel */}
-          {permis.items.length > 0 && (
-            <div className="mt-5">
-              <SidebarPermis permis={permis} />
-            </div>
-          )}
+          {/* Copropriétés et permis — chargés côté client */}
+          <ParcelleSidebarClientSections idParcelle={id} />
 
           {/* Patrimoine ABF */}
           {patrimoine && !patrimoine.importRequired && (
