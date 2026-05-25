@@ -108,6 +108,31 @@ export default async function CommunePage({ params }: { params: Promise<{ slug: 
       }
     })
 
+  const evoFiltered = commune.evolutionPrix.filter(d => d.prixMedianM2).sort((a, b) => a.annee - b.annee)
+  const trendPct = evoFiltered.length >= 2
+    ? Math.round(((evoFiltered.at(-1)!.prixMedianM2! - evoFiltered[0].prixMedianM2!) / evoFiltered[0].prixMedianM2!) * 100)
+    : null
+  const trendYears = evoFiltered.length >= 2 ? { from: evoFiltered[0].annee, to: evoFiltered.at(-1)!.annee } : null
+
+  const dpeTotal = Object.values(commune.distributionDpe).reduce((s, n) => s + n, 0)
+  const dpeBon = (['A', 'B', 'C'] as const).reduce((s, l) => s + (commune.distributionDpe[l] ?? 0), 0)
+  const dpePct = dpeTotal > 0 ? Math.round((dpeBon / dpeTotal) * 100) : null
+
+  const faqItems = [
+    commune.prixMedianM2 ? {
+      q: `Quel est le prix médian au m² à ${nom} ?`,
+      a: `Le prix médian au m² à ${nom} est de ${Math.round(commune.prixMedianM2).toLocaleString('fr-FR')} €${trendPct !== null && trendYears ? `, ${trendPct >= 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(trendPct)} % entre ${trendYears.from} et ${trendYears.to}` : ''}, d'après les données DVF (DGFiP).`,
+    } : null,
+    commune.nbTransactions > 0 ? {
+      q: `Combien de ventes immobilières ont eu lieu à ${nom} depuis 2014 ?`,
+      a: `${commune.nbTransactions.toLocaleString('fr-FR')} transaction${commune.nbTransactions > 1 ? 's' : ''} immobilière${commune.nbTransactions > 1 ? 's' : ''} ont été enregistrées à ${nom} dans la base DVF depuis 2014, sur ${commune.nbParcelles.toLocaleString('fr-FR')} parcelles cadastrales.`,
+    } : null,
+    dpePct !== null && commune.nbDpes > 0 ? {
+      q: `Quelle est la performance énergétique des logements à ${nom} ?`,
+      a: `${dpePct} % des ${commune.nbDpes.toLocaleString('fr-FR')} logements diagnostiqués à ${nom} sont classés C ou mieux (étiquettes A, B ou C), selon les données ADEME.`,
+    } : null,
+  ].filter((x): x is { q: string; a: string } => x !== null)
+
   const jsonLd = [
     {
       '@context': 'https://schema.org',
@@ -122,18 +147,17 @@ export default async function CommunePage({ params }: { params: Promise<{ slug: 
       description: `Données immobilières de ${nom} : ${commune.nbTransactions.toLocaleString('fr-FR')} transactions DVF${commune.prixMedianM2 ? `, prix médian ${Math.round(commune.prixMedianM2).toLocaleString('fr-FR')} €/m²` : ''}.`,
       url: `${siteUrl}/commune/${canonicalSlug}`,
     },
+    ...(faqItems.length >= 2 ? [{
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqItems.map(f => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    }] : []),
     ...realEstateListings,
   ]
-
-  const evoFiltered = commune.evolutionPrix.filter(d => d.prixMedianM2).sort((a, b) => a.annee - b.annee)
-  const trendPct = evoFiltered.length >= 2
-    ? Math.round(((evoFiltered.at(-1)!.prixMedianM2! - evoFiltered[0].prixMedianM2!) / evoFiltered[0].prixMedianM2!) * 100)
-    : null
-  const trendYears = evoFiltered.length >= 2 ? { from: evoFiltered[0].annee, to: evoFiltered.at(-1)!.annee } : null
-
-  const dpeTotal = Object.values(commune.distributionDpe).reduce((s, n) => s + n, 0)
-  const dpeBon = (['A', 'B', 'C'] as const).reduce((s, l) => s + (commune.distributionDpe[l] ?? 0), 0)
-  const dpePct = dpeTotal > 0 ? Math.round((dpeBon / dpeTotal) * 100) : null
 
   const summaryParts: string[] = []
   if (commune.nbTransactions > 0) {
