@@ -237,21 +237,21 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
 
         {/* Breadcrumb row */}
         <div className="parcelle-breadcrumb">
-          <Link href="/carte" className="hover:text-white/80 transition-colors">Carte</Link>
+          <Link href="/carte" prefetch={false} className="hover:text-white/80 transition-colors">Carte</Link>
           {commune?.slugRegion && commune.nomRegion && (
             <>
               <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
-              <Link href={`/region/${commune.slugRegion}`} className="hover:text-white/80 transition-colors">{commune.nomRegion}</Link>
+              <Link href={`/region/${commune.slugRegion}`} prefetch={false} className="hover:text-white/80 transition-colors">{commune.nomRegion}</Link>
             </>
           )}
           {commune?.slugDepartement && commune.nomDepartement && (
             <>
               <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
-              <Link href={`/departement/${commune.slugDepartement}`} className="hover:text-white/80 transition-colors">{commune.nomDepartement}</Link>
+              <Link href={`/departement/${commune.slugDepartement}`} prefetch={false} className="hover:text-white/80 transition-colors">{commune.nomDepartement}</Link>
             </>
           )}
           <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
-          <Link href={`/commune/${communeSlug}`} className="hover:text-white/80 transition-colors">{communeLabel}</Link>
+          <Link href={`/commune/${communeSlug}`} prefetch={false} className="hover:text-white/80 transition-colors">{communeLabel}</Link>
           <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
           <span className="font-mono" style={{ color: 'rgba(255,255,255,0.9)' }}>{id}</span>
           {(dvfDate || dpeDate) && (
@@ -330,6 +330,7 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
                 </span>
                 <Link
                   href={`/carte?lat=${parcelle.centroid.lat}&lon=${parcelle.centroid.lon}&zoom=18&parcelle=${parcelle.idParcelle}`}
+                  prefetch={false}
                   className="hover:text-white/80 transition-colors"
                 >
                   Carte →
@@ -588,7 +589,7 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
           {commune && (
             <div className="pt-5 mt-5" style={{ borderTop: '1px solid var(--slate-200)' }}>
               <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--slate-900)', fontFamily: 'var(--font-body)' }}>
-                <Link href={`/commune/${communeSlug}`} className="hover:underline" style={{ textDecorationColor: 'var(--slate-300)' }}>
+                <Link href={`/commune/${communeSlug}`} prefetch={false} className="hover:underline" style={{ textDecorationColor: 'var(--slate-300)' }}>
                   {communeLabel}
                 </Link>
               </h4>
@@ -665,7 +666,7 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
       <div className="parcelle-footer">
         <span>Sources : Cadastre IGN · DVF DGFiP · DPE ADEME · Géorisques BRGM · BDNB · RNIC · SIRENE INSEE · OpenStreetMap</span>
         <span className="shrink-0 flex items-center gap-4 ml-4">
-          <Link href="/mentions-legales" className="hover:text-slate-600 transition-colors">Mentions légales</Link>
+          <Link href="/mentions-legales" prefetch={false} className="hover:text-slate-600 transition-colors">Mentions légales</Link>
           <span className="font-mono">Geocopia</span>
         </span>
       </div>

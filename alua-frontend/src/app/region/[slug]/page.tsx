@@ -77,7 +77,7 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
           </svg>
 
           <div className="parcelle-breadcrumb">
-            <Link href="/carte" className="hover:text-white/80 transition-colors">Carte</Link>
+            <Link href="/carte" prefetch={false} className="hover:text-white/80 transition-colors">Carte</Link>
             <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
             <span style={{ color: 'rgba(255,255,255,0.9)' }}>{nom}</span>
           </div>
@@ -103,7 +103,7 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
               </h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
                 {region.departements.map(d => (
-                  <Link key={d.code} href={`/departement/${d.slug}`}
+                  <Link key={d.code} href={`/departement/${d.slug}`} prefetch={false}
                     className="block px-4 py-3 rounded-lg transition-colors hover:opacity-80"
                     style={{ background: 'var(--slate-50)', border: '1px solid var(--slate-200)', textDecoration: 'none' }}>
                     <div className="flex items-center justify-between">
@@ -120,7 +120,7 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
         <div className="parcelle-footer">
           <span>Geocopia — données cadastrales françaises</span>
           <span className="shrink-0 flex items-center gap-4 ml-4">
-            <Link href="/mentions-legales" className="hover:text-slate-600 transition-colors">Mentions légales</Link>
+            <Link href="/mentions-legales" prefetch={false} className="hover:text-slate-600 transition-colors">Mentions légales</Link>
             <span className="font-mono">Geocopia</span>
           </span>
         </div>
