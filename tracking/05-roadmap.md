@@ -414,7 +414,7 @@ directement sur le VPS selon les TTL.
 > Chaque page doit pointer vers ses voisines. Actuellement le maillage commune ↔ parcelle
 > existe, mais les liens horizontaux (communes voisines, autres adresses de la même rue) manquent.
 
-- [ ] Communes voisines sur la fiche commune (5 communes limitrophes, via PostGIS ST_DWithin)
+- [x] Communes voisines sur la fiche commune (8 communes limitrophes, via PostGIS ST_DWithin 100m sur geometry MultiPolygon)
 - [ ] Page rue (`/commune/toulouse/rue/rue-de-la-paix`) : liste des adresses, dernières transactions
 - [ ] "Autres adresses au même numéro de rue" sur la fiche adresse
 - [ ] "Parcelles adjacentes" sur la fiche parcelle (ST_Touches)

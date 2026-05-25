@@ -252,6 +252,13 @@ export interface ParcellePoi {
   fetchedAt: string | null
 }
 
+export interface CommuneVoisine {
+  code: string
+  nom: string | null
+  slug: string | null
+  population: number | null
+}
+
 export interface ApiCollection<T> {
   'hydra:member': T[]
   'hydra:totalItems': number

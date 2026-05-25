@@ -1,11 +1,44 @@
 import { notFound, permanentRedirect } from 'next/navigation'
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { Euro, Flame } from 'lucide-react'
-import type { Commune } from '@/types/api'
+import type { Commune, CommuneVoisine } from '@/types/api'
 import { formatPrice, formatDate, DpeBadge, PrixEvolutionChart, DpeDistributionBar } from '@/components/fiche'
 import GeocopiaHeader from '@/components/GeocopiaHeader'
 
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL!
+
+async function CommunesVoisinesSection({ slug }: { slug: string }) {
+  let voisines: CommuneVoisine[] = []
+  try {
+    const res = await fetch(`${API_URL}/api/communes/${slug}/voisines`, { next: { revalidate: 86400 } })
+    if (res.ok) voisines = await res.json()
+  } catch { /* section absente */ }
+
+  if (!voisines.length) return null
+
+  return (
+    <section style={{ marginBottom: 56 }}>
+      <h2 className="text-xl font-semibold mb-5" style={{ color: 'var(--slate-900)', letterSpacing: '-0.005em' }}>
+        Communes voisines
+      </h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+        {voisines.map(c => (
+          <Link key={c.code} href={c.slug ? `/commune/${c.slug}` : `/commune/${c.code}`} prefetch={false}
+            className="block px-4 py-3 rounded-lg transition-colors hover:opacity-80"
+            style={{ background: 'var(--slate-50)', border: '1px solid var(--slate-200)', textDecoration: 'none' }}>
+            <div className="font-medium text-sm" style={{ color: 'var(--slate-900)' }}>{c.nom}</div>
+            {c.population && (
+              <div className="text-xs mt-0.5" style={{ color: 'var(--slate-500)' }}>
+                {c.population.toLocaleString('fr-FR')} hab.
+              </div>
+            )}
+          </Link>
+        ))}
+      </div>
+    </section>
+  )
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -325,6 +358,11 @@ export default async function CommunePage({ params }: { params: Promise<{ slug: 
               </div>
             </section>
           )}
+
+          {/* Communes voisines */}
+          <Suspense>
+            <CommunesVoisinesSection slug={canonicalSlug} />
+          </Suspense>
 
         </div>
 
