@@ -279,6 +279,7 @@ export default async function AdressePage({ params }: { params: Promise<{ banId:
                     <Link
                       key={p.idParcelle}
                       href={`/parcelle/${p.idParcelle}`}
+                      prefetch={false}
                       className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:opacity-80"
                       style={{ background: 'var(--slate-50)', border: '1px solid var(--slate-200)', textDecoration: 'none' }}
                     >
@@ -290,6 +291,23 @@ export default async function AdressePage({ params }: { params: Promise<{ banId:
                     </Link>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {address.communeCode && address.commune && (
+              <div className={address.parcelles.length > 0 ? 'mt-5 pt-5' : ''} style={address.parcelles.length > 0 ? { borderTop: '1px solid var(--slate-200)' } : {}}>
+                <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--slate-900)', fontFamily: 'var(--font-body)' }}>
+                  Commune
+                </h4>
+                <Link
+                  href={`/commune/${address.communeSlug ?? address.communeCode}`}
+                  prefetch={false}
+                  className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:opacity-80"
+                  style={{ background: 'var(--slate-50)', border: '1px solid var(--slate-200)', textDecoration: 'none' }}
+                >
+                  <span className="text-sm font-medium" style={{ color: 'var(--slate-700)' }}>{address.commune}</span>
+                  <span className="text-xs" style={{ color: 'var(--slate-400)' }}>Fiche commune →</span>
+                </Link>
               </div>
             )}
           </aside>

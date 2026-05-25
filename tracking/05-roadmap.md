@@ -418,7 +418,7 @@ directement sur le VPS selon les TTL.
 - [ ] Page rue (`/commune/toulouse/rue/rue-de-la-paix`) : liste des adresses, dernières transactions
 - [ ] "Autres adresses au même numéro de rue" sur la fiche adresse
 - [ ] "Parcelles adjacentes" sur la fiche parcelle (ST_Touches)
-- [ ] Footer commune sur fiche adresse et parcelle (lien vers la fiche commune parente)
+- [x] Footer commune sur fiche adresse et parcelle (lien vers la fiche commune parente) — adresse : bloc sidebar ; parcelle : déjà présent via "Comparaison commune" + breadcrumb
 
 ### 7.4 — Enrichissement Schema.org
 
@@ -426,7 +426,7 @@ directement sur le VPS selon les TTL.
 > structurées parfaites pour `RealEstateListing`.
 
 - [x] `RealEstateListing` + `Offer` pour chaque transaction DVF sur les fiches (prix, date, surface) — fiche parcelle (10 tx) + fiche commune (20 tx)
-- [ ] `GeoCoordinates` sur les fiches adresse et parcelle (lat/lng depuis PostGIS)
+- [x] `GeoCoordinates` sur les fiches adresse et parcelle (lat/lng depuis PostGIS)
 - [x] `FAQPage` sur les fiches commune — 3 Q&R générées dynamiquement (prix médian, nb ventes, DPE)
 - [x] `Dataset` en JSON-LD sur la page d'accueil (référence les sources ouvertes utilisées)
 
