@@ -17,7 +17,8 @@ export default function GeocopiaHeader({ onSearchSelect, activeRoute }: Props) {
         borderBottom: '1px solid var(--slate-200)',
         display: 'flex',
         alignItems: 'center',
-        padding: '0 24px',
+        gap: 8,
+        padding: '0 12px',
         flexShrink: 0,
         position: 'relative',
         zIndex: 10,
@@ -36,7 +37,9 @@ export default function GeocopiaHeader({ onSearchSelect, activeRoute }: Props) {
         >
           g
         </div>
+        {/* Texte caché sur petits écrans */}
         <span
+          className="hidden sm:inline"
           style={{
             fontFamily: 'var(--font-display)', fontWeight: 700,
             fontSize: 17, letterSpacing: '-0.02em', color: 'var(--slate-900)',
@@ -46,24 +49,20 @@ export default function GeocopiaHeader({ onSearchSelect, activeRoute }: Props) {
         </span>
       </Link>
 
-      {/* Search — absolutely centered */}
-      <div style={{
-        position: 'absolute',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: 480,
-        maxWidth: 'calc(100% - 320px)',
-      }}>
+      {/* Search — flex-1, prend l'espace disponible */}
+      <div style={{ flex: 1, minWidth: 0, maxWidth: 520 }} className="mx-1 sm:mx-3">
         <SearchBar onSelect={onSearchSelect} />
       </div>
 
       {/* Nav — right */}
-      <nav style={{ display: 'flex', gap: 2, marginLeft: 'auto', flexShrink: 0 }}>
+      <nav style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+        {/* Régions caché sur petits écrans */}
         <Link
           href="/regions"
           prefetch={false}
+          className="hidden sm:inline-flex"
           style={{
-            display: 'inline-flex', alignItems: 'center',
+            alignItems: 'center',
             height: 30, padding: '0 12px',
             borderRadius: 6, fontSize: 15, fontWeight: 500,
             color: activeRoute === 'regions' ? 'var(--slate-900)' : 'var(--slate-600)',
@@ -71,7 +70,6 @@ export default function GeocopiaHeader({ onSearchSelect, activeRoute }: Props) {
             textDecoration: 'none',
             transition: 'background .15s, color .15s',
           }}
-          className="hover:bg-[#f1f5f9] hover:text-[#1e293b]"
         >
           Régions
         </Link>
