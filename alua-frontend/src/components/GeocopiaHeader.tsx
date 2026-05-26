@@ -11,13 +11,11 @@ interface Props {
 export default function GeocopiaHeader({ onSearchSelect, activeRoute }: Props) {
   return (
     <header
+      className="flex sm:grid sm:grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-0"
       style={{
         height: 56,
         background: 'white',
         borderBottom: '1px solid var(--slate-200)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
         padding: '0 12px',
         flexShrink: 0,
         position: 'relative',
@@ -49,13 +47,13 @@ export default function GeocopiaHeader({ onSearchSelect, activeRoute }: Props) {
         </span>
       </Link>
 
-      {/* Search — flex-1, prend l'espace disponible */}
-      <div style={{ flex: 1, minWidth: 0, maxWidth: 520 }} className="mx-1 sm:mx-3">
+      {/* Search — flex-1 sur mobile, centré sur desktop */}
+      <div className="flex-1 sm:flex-none min-w-0 sm:w-[min(520px,_40vw)] mx-1 sm:mx-4">
         <SearchBar onSelect={onSearchSelect} />
       </div>
 
       {/* Nav — right */}
-      <nav style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+      <nav style={{ display: 'flex', gap: 2, flexShrink: 0 }} className="sm:justify-end">
         {/* Régions caché sur petits écrans */}
         <Link
           href="/regions"
