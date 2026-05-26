@@ -105,7 +105,7 @@ export default function MapView({ initialFocus }: { initialFocus?: InitialFocus 
   const [visibleOverlays, setVisibleOverlays] = useState<Set<OverlayId>>(new Set(['admin', 'parcelles']))
   const [parcelle, setParcelle] = useState<Parcelle | null>(null)
   const [loading, setLoading] = useState(false)
-  const [layersOpen, setLayersOpen] = useState(false)
+  const [layersOpen, setLayersOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768)
   const [mapReady, setMapReady] = useState(false)
 
   useEffect(() => {
