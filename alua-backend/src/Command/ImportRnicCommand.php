@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Service\NextRevalidateService;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -31,8 +32,10 @@ class ImportRnicCommand extends Command
     private const TTL_MONTHS = 3;
     private const BATCH      = 500;
 
-    public function __construct(private readonly Connection $connection)
-    {
+    public function __construct(
+        private readonly Connection $connection,
+        private readonly NextRevalidateService $revalidate,
+    ) {
         parent::__construct();
     }
 
@@ -76,6 +79,8 @@ class ImportRnicCommand extends Command
                 unlink($tmpFile);
             }
         }
+
+        $this->revalidate->revalidateTags(['rnic']);
 
         return Command::SUCCESS;
     }

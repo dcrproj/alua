@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Service\NextRevalidateService;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -24,8 +25,10 @@ class ImportSitadelCommand extends Command
 
     private const BATCH_SIZE = 500;
 
-    public function __construct(private readonly Connection $connection)
-    {
+    public function __construct(
+        private readonly Connection $connection,
+        private readonly NextRevalidateService $revalidate,
+    ) {
         parent::__construct();
     }
 
@@ -65,6 +68,8 @@ class ImportSitadelCommand extends Command
 
         $total = $this->connection->fetchOne('SELECT COUNT(*) FROM sitadel_permis');
         $io->success("Import terminé — $totalInserted inserts, $totalUpdated updates. Total en base : $total permis.");
+
+        $this->revalidate->revalidateTags(['sitadel']);
 
         return Command::SUCCESS;
     }

@@ -9,7 +9,7 @@ async function get<T>(path: string, params?: Record<string, string>): Promise<T>
   }
   const res = await fetch(url.toString(), {
     headers: { Accept: 'application/ld+json' },
-    next: { revalidate: 3600 },
+    next: { revalidate: 86400 },
   })
   if (!res.ok) throw new Error(`API ${res.status}: ${path}`)
   return res.json() as Promise<T>

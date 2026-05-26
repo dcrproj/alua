@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Service\NextRevalidateService;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -34,8 +35,10 @@ class ImportBdnbCommand extends Command
     private const TABLE     = 'batiment_bdnb';
     private const BATCH     = 500;
 
-    public function __construct(private readonly Connection $connection)
-    {
+    public function __construct(
+        private readonly Connection $connection,
+        private readonly NextRevalidateService $revalidate,
+    ) {
         parent::__construct();
     }
 
@@ -77,6 +80,8 @@ class ImportBdnbCommand extends Command
 
         $grandTotal = $this->connection->fetchOne('SELECT COUNT(*) FROM ' . self::TABLE);
         $io->success("Total session : $total · Total en base : $grandTotal bâtiments.");
+        $this->revalidate->revalidateTags(['bdnb']);
+
         return Command::SUCCESS;
     }
 

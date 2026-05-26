@@ -74,7 +74,7 @@ function medianPrixM2(transactions: ParcelleTransaction[]): number | null {
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const res = await fetch(`${API_URL}/api/parcelles/${id}`, { headers: { Accept: 'application/ld+json' } })
+  const res = await fetch(`${API_URL}/api/parcelles/${id}`, { headers: { Accept: 'application/ld+json' }, next: { revalidate: 86400, tags: ['parcelles', `parcelle-${id}`] } })
   if (!res.ok) return { title: 'Parcelle introuvable' }
   const p: Parcelle = await res.json()
   const addr = p.address
@@ -99,12 +99,12 @@ export default async function ParcellePage({ params }: { params: Promise<{ id: s
   const communeCode = id.substring(0, 5)
 
   const [parcelleRes, transactionsRes, dpesRes, communeRes, patrimoineRes, batimentRes] = await Promise.all([
-    fetch(`${API_URL}/api/parcelles/${id}`, { headers: { Accept: 'application/ld+json' }, next: { revalidate: 3600 } }),
-    fetch(`${API_URL}/api/parcelles/${id}/transactions`, { next: { revalidate: 3600 } }),
-    fetch(`${API_URL}/api/parcelles/${id}/dpes`, { next: { revalidate: 3600 } }),
-    fetch(`${API_URL}/api/communes/${communeCode}`, { headers: { Accept: 'application/ld+json' }, next: { revalidate: 3600 } }),
-    fetch(`${API_URL}/api/parcelles/${id}/patrimoine`, { next: { revalidate: 86400 } }),
-    fetch(`${API_URL}/api/parcelles/${id}/batiment`, { next: { revalidate: 86400 } }),
+    fetch(`${API_URL}/api/parcelles/${id}`, { headers: { Accept: 'application/ld+json' }, next: { revalidate: 86400, tags: ['parcelles', `parcelle-${id}`] } }),
+    fetch(`${API_URL}/api/parcelles/${id}/transactions`, { next: { revalidate: 86400, tags: ['parcelles', 'dvf', `parcelle-${id}`] } }),
+    fetch(`${API_URL}/api/parcelles/${id}/dpes`, { next: { revalidate: 86400, tags: ['parcelles', 'dpe', `parcelle-${id}`] } }),
+    fetch(`${API_URL}/api/communes/${communeCode}`, { headers: { Accept: 'application/ld+json' }, next: { revalidate: 86400, tags: ['communes', `commune-${communeCode}`] } }),
+    fetch(`${API_URL}/api/parcelles/${id}/patrimoine`, { next: { revalidate: 86400, tags: ['parcelles', `parcelle-${id}`] } }),
+    fetch(`${API_URL}/api/parcelles/${id}/batiment`, { next: { revalidate: 86400, tags: ['parcelles', 'bdnb', `parcelle-${id}`] } }),
   ])
 
   if (!parcelleRes.ok) notFound()

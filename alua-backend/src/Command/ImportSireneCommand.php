@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Service\NextRevalidateService;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -18,8 +19,10 @@ class ImportSireneCommand extends Command
     private const ETAB_URL   = 'https://object.files.data.gouv.fr/data-pipeline-open/siren/stock/StockEtablissement_utf8.zip';
     private const BATCH_SIZE = 1000;
 
-    public function __construct(private readonly Connection $connection)
-    {
+    public function __construct(
+        private readonly Connection $connection,
+        private readonly NextRevalidateService $revalidate,
+    ) {
         parent::__construct();
     }
 
@@ -82,6 +85,8 @@ class ImportSireneCommand extends Command
         } finally {
             @unlink($zipPath);
         }
+
+        $this->revalidate->revalidateTags(['sirene']);
 
         return Command::SUCCESS;
     }

@@ -63,7 +63,7 @@ function RisqueTableRow({ r }: { r: RisqueDisplay }) {
 export async function RisquesServerSection({ idParcelle }: { idParcelle: string }) {
   let risques: ParcelleRisques | null = null
   try {
-    const res = await fetch(`${API_URL}/api/parcelles/${idParcelle}/risques`, { next: { revalidate: 86400 } })
+    const res = await fetch(`${API_URL}/api/parcelles/${idParcelle}/risques`, { next: { revalidate: 86400, tags: ['parcelles', 'risques', `parcelle-${idParcelle}`] } })
     if (res.ok) risques = await res.json()
   } catch { /* réseau indisponible → section absente */ }
 
@@ -141,7 +141,7 @@ const nafLibelle = (code: string | null) =>
 export async function EntreprisesServerSection({ idParcelle }: { idParcelle: string }) {
   let data: SectionData<SireneEtablissement> = { items: [], updatedAt: null }
   try {
-    const res = await fetch(`${API_URL}/api/parcelles/${idParcelle}/entreprises`, { next: { revalidate: 3600 } })
+    const res = await fetch(`${API_URL}/api/parcelles/${idParcelle}/entreprises`, { next: { revalidate: 86400, tags: ['parcelles', 'sirene', `parcelle-${idParcelle}`] } })
     if (res.ok) data = await res.json()
   } catch { /* section absente */ }
 
@@ -186,7 +186,7 @@ export async function EntreprisesServerSection({ idParcelle }: { idParcelle: str
 export async function PoiServerSection({ idParcelle }: { idParcelle: string }) {
   let data: ParcellePoi = { categories: [], fetchedAt: null }
   try {
-    const res = await fetch(`${API_URL}/api/parcelles/${idParcelle}/poi`, { next: { revalidate: 86400 } })
+    const res = await fetch(`${API_URL}/api/parcelles/${idParcelle}/poi`, { next: { revalidate: 86400, tags: ['parcelles', 'poi', `parcelle-${idParcelle}`] } })
     if (res.ok) data = await res.json()
   } catch { /* section absente */ }
 
@@ -221,7 +221,7 @@ export async function PoiServerSection({ idParcelle }: { idParcelle: string }) {
 export async function CoproprieteServerSection({ idParcelle }: { idParcelle: string }) {
   let data: SectionData<Copropriete> = { items: [], updatedAt: null }
   try {
-    const res = await fetch(`${API_URL}/api/parcelles/${idParcelle}/coproprietes`, { next: { revalidate: 3600 } })
+    const res = await fetch(`${API_URL}/api/parcelles/${idParcelle}/coproprietes`, { next: { revalidate: 86400, tags: ['parcelles', 'rnic', `parcelle-${idParcelle}`] } })
     if (res.ok) data = await res.json()
   } catch { /* section absente */ }
 
@@ -289,7 +289,7 @@ const ETAT_COLORS: Record<string, string> = {
 export async function PermisServerSection({ idParcelle }: { idParcelle: string }) {
   let data: SectionData<SitadelPermis> = { items: [], updatedAt: null }
   try {
-    const res = await fetch(`${API_URL}/api/parcelles/${idParcelle}/permis`, { next: { revalidate: 3600 } })
+    const res = await fetch(`${API_URL}/api/parcelles/${idParcelle}/permis`, { next: { revalidate: 86400, tags: ['parcelles', 'sitadel', `parcelle-${idParcelle}`] } })
     if (res.ok) data = await res.json()
   } catch { /* section absente */ }
 

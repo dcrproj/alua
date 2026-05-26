@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Service\NextRevalidateService;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -34,8 +35,10 @@ class ImportAdminCommand extends Command
         '90','91','92','93','94','95',
     ];
 
-    public function __construct(private readonly Connection $connection)
-    {
+    public function __construct(
+        private readonly Connection $connection,
+        private readonly NextRevalidateService $revalidate,
+    ) {
         parent::__construct();
     }
 
@@ -59,6 +62,8 @@ class ImportAdminCommand extends Command
         $this->deriveRegions($io, $regionMeta);
 
         $io->success('Import terminé.');
+
+        $this->revalidate->revalidateTags(['communes']);
 
         return Command::SUCCESS;
     }

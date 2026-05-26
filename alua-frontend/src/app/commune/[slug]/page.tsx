@@ -61,7 +61,7 @@ export default async function CommunePage({ params }: { params: Promise<{ slug: 
 
   const res = await fetch(`${API_URL}/api/communes/${slug}`, {
     headers: { Accept: 'application/ld+json' },
-    next: { revalidate: 3600 },
+    next: { revalidate: 86400, tags: ['communes', `commune-${slug}`] },
   })
   if (!res.ok) notFound()
   const commune: Commune = await res.json()
