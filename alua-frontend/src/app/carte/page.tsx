@@ -5,6 +5,9 @@ import MapWrapper from './MapWrapper'
 export const metadata: Metadata = {
   title: 'Carte interactive — Parcelles, transactions DVF et DPE',
   description: 'Explorez la carte des parcelles cadastrales françaises. Visualisez les transactions immobilières DVF, les diagnostics DPE et les données de chaque parcelle.',
+  alternates: {
+    canonical: '/carte',
+  },
 }
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://geocopia.fr'
