@@ -53,6 +53,4 @@ jobs:
         run: ssh -o ControlPath=~/.ssh/ctl/%h_%p_%r vps 'bash /home/david/www/alua/scripts/deploy-backend.sh'
 
       - name: Post-deploy frontend
-        run: |
-          ssh -o ControlPath=~/.ssh/ctl/%h_%p_%r vps \
-            'rm -rf /home/david/www/alua/alua-frontend/.next && bash /home/david/www/alua/scripts/deploy-frontend.sh'
+        run: ssh -o ControlPath=~/.ssh/ctl/%h_%p_%r vps 'bash /home/david/www/alua/scripts/deploy-frontend.sh'
