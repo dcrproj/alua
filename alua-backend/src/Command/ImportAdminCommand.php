@@ -98,11 +98,11 @@ class ImportAdminCommand extends Command
         $count = 0;
         foreach ($regionMeta as $code => $nom) {
             $this->connection->executeStatement(
-                "INSERT INTO regions (code, nom, geometry)
-                 SELECT :code, :nom, ST_Multi(ST_Union(geometry))::geometry(MultiPolygon,4326)
+                "INSERT INTO regions (code, nom, geometry, slug)
+                 SELECT :code, :nom, ST_Multi(ST_Union(geometry))::geometry(MultiPolygon,4326), :slug
                  FROM departements WHERE code_region = :code
                  ON CONFLICT (code) DO UPDATE SET nom = EXCLUDED.nom, geometry = EXCLUDED.geometry",
-                ['code' => $code, 'nom' => $nom]
+                ['code' => $code, 'nom' => $nom, 'slug' => $this->slugify($nom) ?: $code]
             );
             ++$count;
         }
@@ -115,11 +115,11 @@ class ImportAdminCommand extends Command
         $count = 0;
         foreach ($deptMeta as $code => $data) {
             $this->connection->executeStatement(
-                "INSERT INTO departements (code, nom, code_region, geometry)
-                 SELECT :code, :nom, :code_region, ST_Multi(ST_Union(geometry))::geometry(MultiPolygon,4326)
+                "INSERT INTO departements (code, nom, code_region, geometry, slug)
+                 SELECT :code, :nom, :code_region, ST_Multi(ST_Union(geometry))::geometry(MultiPolygon,4326), :slug
                  FROM communes WHERE code_departement = :code
                  ON CONFLICT (code) DO UPDATE SET nom = EXCLUDED.nom, code_region = EXCLUDED.code_region, geometry = EXCLUDED.geometry",
-                ['code' => $code, 'nom' => $data['nom'], 'code_region' => $data['codeRegion']]
+                ['code' => $code, 'nom' => $data['nom'], 'code_region' => $data['codeRegion'], 'slug' => $this->slugify($data['nom']) ?: $code]
             );
             ++$count;
         }
