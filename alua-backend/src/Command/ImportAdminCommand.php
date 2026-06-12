@@ -136,25 +136,33 @@ class ImportAdminCommand extends Command
                 sprintf('/communes?codeDepartement=%s&fields=code,nom,codeDepartement,population,contour', $dept)
             );
 
-            $batch = [];
+            $withGeom    = [];
+            $withoutGeom = [];
             foreach ($items as $item) {
                 $code = $item['code'] ?? null;
-                if (!$code || empty($item['contour'])) {
+                if (!$code) {
                     continue;
                 }
-                $batch[] = [
+                $base = [
                     'code_insee'       => $code,
                     'nom'              => $item['nom'] ?? '',
                     'code_departement' => $item['codeDepartement'] ?? null,
                     'population'       => $item['population'] ?? null,
-                    'geom'             => json_encode($item['contour']),
                 ];
+                if (!empty($item['contour'])) {
+                    $withGeom[] = $base + ['geom' => json_encode($item['contour'])];
+                } else {
+                    $withoutGeom[] = $base;
+                }
             }
 
-            if (!empty($batch)) {
-                $this->insertCommuneBatch($batch);
-                $total += count($batch);
+            if (!empty($withGeom)) {
+                $this->insertCommuneBatch($withGeom);
             }
+            if (!empty($withoutGeom)) {
+                $this->insertCommuneBatchNoGeom($withoutGeom);
+            }
+            $total += count($withGeom) + count($withoutGeom);
 
             $output->write(sprintf("\r  → %d communes importées…", $total));
         }
@@ -192,6 +200,35 @@ class ImportAdminCommand extends Command
                      code_departement = EXCLUDED.code_departement,
                      population = EXCLUDED.population,
                      geometry = EXCLUDED.geometry,
+                     slug = EXCLUDED.slug",
+                implode(', ', $valueParts)
+            ),
+            $params
+        );
+    }
+
+    private function insertCommuneBatchNoGeom(array $batch): void
+    {
+        $valueParts = [];
+        $params     = [];
+
+        foreach ($batch as $i => $row) {
+            $valueParts[] = sprintf("(:code_%d, :nom_%d, :dept_%d, :pop_%d, :slug_%d)", $i, $i, $i, $i, $i);
+            $params["code_{$i}"] = $row['code_insee'];
+            $params["nom_{$i}"]  = $row['nom'];
+            $params["dept_{$i}"] = $row['code_departement'];
+            $params["pop_{$i}"]  = $row['population'];
+            $params["slug_{$i}"] = $this->slugify($row['nom']) ?: $row['code_insee'];
+        }
+
+        $this->connection->executeStatement(
+            sprintf(
+                "INSERT INTO communes (code_insee, nom, code_departement, population, slug)
+                 VALUES %s
+                 ON CONFLICT (code_insee) DO UPDATE SET
+                     nom = EXCLUDED.nom,
+                     code_departement = EXCLUDED.code_departement,
+                     population = EXCLUDED.population,
                      slug = EXCLUDED.slug",
                 implode(', ', $valueParts)
             ),

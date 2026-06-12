@@ -44,7 +44,7 @@ export default async function AdressePage({ params }: { params: Promise<{ banId:
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Carte', item: `${siteUrl}/carte` },
-        ...(address.communeCode ? [{ '@type': 'ListItem', position: 2, name: address.commune ?? address.communeCode, item: `${siteUrl}/commune/${address.communeSlug ?? address.communeCode}` }] : []),
+        ...(address.communeCode && address.communeSlug ? [{ '@type': 'ListItem', position: 2, name: address.commune ?? address.communeCode, item: `${siteUrl}/commune/${address.communeSlug}` }] : []),
         { '@type': 'ListItem', position: address.communeCode ? 3 : 2, name: fullLabel, item: `${siteUrl}/adresse/${banId}` },
       ],
     },
@@ -94,8 +94,8 @@ export default async function AdressePage({ params }: { params: Promise<{ banId:
           <div className="parcelle-breadcrumb">
             <Link href="/carte" className="hover:text-white/80 transition-colors">Carte</Link>
             <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
-            {address.communeCode && address.commune ? (
-              <Link href={`/commune/${address.communeSlug ?? address.communeCode}`} className="hover:text-white/80 transition-colors">
+            {address.communeCode && address.commune && address.communeSlug ? (
+              <Link href={`/commune/${address.communeSlug}`} className="hover:text-white/80 transition-colors">
                 {address.commune}
               </Link>
             ) : (
@@ -294,13 +294,13 @@ export default async function AdressePage({ params }: { params: Promise<{ banId:
               </div>
             )}
 
-            {address.communeCode && address.commune && (
+            {address.communeCode && address.commune && address.communeSlug && (
               <div className={address.parcelles.length > 0 ? 'mt-5 pt-5' : ''} style={address.parcelles.length > 0 ? { borderTop: '1px solid var(--slate-200)' } : {}}>
                 <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--slate-900)', fontFamily: 'var(--font-body)' }}>
                   Commune
                 </h4>
                 <Link
-                  href={`/commune/${address.communeSlug ?? address.communeCode}`}
+                  href={`/commune/${address.communeSlug}`}
                   prefetch={false}
                   className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:opacity-80"
                   style={{ background: 'var(--slate-50)', border: '1px solid var(--slate-200)', textDecoration: 'none' }}

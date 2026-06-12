@@ -23,8 +23,8 @@ async function CommunesVoisinesSection({ slug }: { slug: string }) {
         Communes voisines
       </h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
-        {voisines.map(c => (
-          <Link key={c.code} href={c.slug ? `/commune/${c.slug}` : `/commune/${c.code}`} prefetch={false}
+        {voisines.filter(c => c.slug).map(c => (
+          <Link key={c.code} href={`/commune/${c.slug}`} prefetch={false}
             className="block px-4 py-3 rounded-lg transition-colors hover:opacity-80"
             style={{ background: 'var(--slate-50)', border: '1px solid var(--slate-200)', textDecoration: 'none' }}>
             <div className="font-medium text-sm" style={{ color: 'var(--slate-900)' }}>{c.nom}</div>

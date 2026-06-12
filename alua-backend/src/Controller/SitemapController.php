@@ -64,7 +64,10 @@ class SitemapController extends AbstractController
     public function parcellesCount(): JsonResponse
     {
         $count = (int) $this->connection->fetchOne(
-            'SELECT COUNT(DISTINCT id_parcelle) FROM mutations_dvf_lots WHERE id_parcelle IS NOT NULL'
+            'SELECT COUNT(DISTINCT l.id_parcelle)
+             FROM mutations_dvf_lots l
+             INNER JOIN parcelles p ON p.id_parcelle = l.id_parcelle
+             WHERE l.id_parcelle IS NOT NULL'
         );
         return $this->json([
             'count'   => $count,
@@ -76,10 +79,11 @@ class SitemapController extends AbstractController
     public function parcelles(int $batch): JsonResponse
     {
         $rows = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT id_parcelle
-             FROM mutations_dvf_lots
-             WHERE id_parcelle IS NOT NULL
-             ORDER BY id_parcelle
+            'SELECT DISTINCT l.id_parcelle
+             FROM mutations_dvf_lots l
+             INNER JOIN parcelles p ON p.id_parcelle = l.id_parcelle
+             WHERE l.id_parcelle IS NOT NULL
+             ORDER BY l.id_parcelle
              LIMIT ' . self::BATCH_SIZE . ' OFFSET :offset',
             ['offset' => $batch * self::BATCH_SIZE]
         );
