@@ -157,9 +157,11 @@ class ImportAdminCommand extends Command
             }
 
             if (!empty($withGeom)) {
+                $this->assignSlugs($withGeom);
                 $this->insertCommuneBatch($withGeom);
             }
             if (!empty($withoutGeom)) {
+                $this->assignSlugs($withoutGeom);
                 $this->insertCommuneBatchNoGeom($withoutGeom);
             }
             $total += count($withGeom) + count($withoutGeom);
@@ -169,8 +171,53 @@ class ImportAdminCommand extends Command
 
         $output->writeln('');
         $io->text(sprintf('  → %d communes importées.', $total));
-        $this->resolveSlugConflicts();
-        $io->text('  → Conflits de slugs résolus.');
+    }
+
+    /**
+     * Calcule les slugs pour un batch en évitant les conflits intra-batch
+     * et avec les slugs déjà présents en base (pour une commune différente).
+     */
+    private function assignSlugs(array &$rows): void
+    {
+        foreach ($rows as &$row) {
+            $row['slug'] = $this->slugify($row['nom']) ?: $row['code_insee'];
+        }
+        unset($row);
+
+        // Dédupliquer les conflits intra-batch
+        $seen = [];
+        foreach ($rows as &$row) {
+            if (isset($seen[$row['slug']])) {
+                $row['slug'] .= '-' . $row['code_insee'];
+            }
+            $seen[$row['slug']] = true;
+        }
+        unset($row);
+
+        // Vérifier les conflits avec les slugs déjà en base (commune différente)
+        $slugs = array_column($rows, 'slug');
+        $codes = array_column($rows, 'code_insee');
+        if (empty($slugs)) {
+            return;
+        }
+
+        $inList = implode(',', array_fill(0, count($slugs), '?'));
+        $existing = $this->connection->fetchAllAssociative(
+            "SELECT slug, code_insee FROM communes WHERE slug IN ($inList)",
+            $slugs
+        );
+
+        $takenByOther = [];
+        foreach ($existing as $ex) {
+            $takenByOther[$ex['slug']] = $ex['code_insee'];
+        }
+
+        foreach ($rows as &$row) {
+            $owner = $takenByOther[$row['slug']] ?? null;
+            if ($owner !== null && $owner !== $row['code_insee']) {
+                $row['slug'] .= '-' . $row['code_insee'];
+            }
+        }
     }
 
     private function insertCommuneBatch(array $batch): void
@@ -188,7 +235,7 @@ class ImportAdminCommand extends Command
             $params["dept_{$i}"] = $row['code_departement'];
             $params["pop_{$i}"]  = $row['population'];
             $params["geom_{$i}"] = $row['geom'];
-            $params["slug_{$i}"] = $this->slugify($row['nom']) ?: $row['code_insee'];
+            $params["slug_{$i}"] = $row['slug'];
         }
 
         $this->connection->executeStatement(
@@ -196,11 +243,10 @@ class ImportAdminCommand extends Command
                 "INSERT INTO communes (code_insee, nom, code_departement, population, geometry, slug)
                  VALUES %s
                  ON CONFLICT (code_insee) DO UPDATE SET
-                     nom = EXCLUDED.nom,
+                     nom      = EXCLUDED.nom,
                      code_departement = EXCLUDED.code_departement,
-                     population = EXCLUDED.population,
-                     geometry = EXCLUDED.geometry,
-                     slug = EXCLUDED.slug",
+                     population       = EXCLUDED.population,
+                     geometry         = EXCLUDED.geometry",
                 implode(', ', $valueParts)
             ),
             $params
@@ -218,7 +264,7 @@ class ImportAdminCommand extends Command
             $params["nom_{$i}"]  = $row['nom'];
             $params["dept_{$i}"] = $row['code_departement'];
             $params["pop_{$i}"]  = $row['population'];
-            $params["slug_{$i}"] = $this->slugify($row['nom']) ?: $row['code_insee'];
+            $params["slug_{$i}"] = $row['slug'];
         }
 
         $this->connection->executeStatement(
@@ -226,24 +272,13 @@ class ImportAdminCommand extends Command
                 "INSERT INTO communes (code_insee, nom, code_departement, population, slug)
                  VALUES %s
                  ON CONFLICT (code_insee) DO UPDATE SET
-                     nom = EXCLUDED.nom,
+                     nom              = EXCLUDED.nom,
                      code_departement = EXCLUDED.code_departement,
-                     population = EXCLUDED.population,
-                     slug = EXCLUDED.slug",
+                     population       = EXCLUDED.population",
                 implode(', ', $valueParts)
             ),
             $params
         );
-    }
-
-    private function resolveSlugConflicts(): void
-    {
-        // Append code_insee to duplicates that arose from cross-department batching
-        $this->connection->executeStatement("
-            UPDATE communes c1
-            SET slug = c1.slug || '-' || c1.code_insee
-            WHERE (SELECT COUNT(*) FROM communes c2 WHERE c2.slug = c1.slug) > 1
-        ");
     }
 
     private function slugify(string $text): string
