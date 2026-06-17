@@ -16,14 +16,67 @@ export async function generateStaticParams() {
   }
 }
 
+function formatPrice(v: number) {
+  return v.toLocaleString('fr-FR') + ' €/m²'
+}
+
+function buildRegionSummary(region: Region): string {
+  const nom = region.nom ?? ''
+  const parts: string[] = []
+
+  const deptTxt = region.departements.length > 0
+    ? `${region.departements.length} département${region.departements.length > 1 ? 's' : ''}`
+    : null
+  const communesTxt = region.nbCommunes > 0
+    ? `${region.nbCommunes.toLocaleString('fr-FR')} communes`
+    : null
+  const popTxt = region.populationTotale
+    ? `${region.populationTotale.toLocaleString('fr-FR')} habitants`
+    : null
+
+  if (deptTxt && communesTxt && popTxt) {
+    parts.push(`La région ${nom} regroupe ${deptTxt} et ${communesTxt} pour une population totale de ${popTxt}.`)
+  } else if (deptTxt && communesTxt) {
+    parts.push(`La région ${nom} regroupe ${deptTxt} et ${communesTxt}.`)
+  }
+
+  if (region.nbParcelles > 0 && region.nbTransactions > 0) {
+    parts.push(
+      `On y recense ${region.nbParcelles.toLocaleString('fr-FR')} parcelles cadastrales et ${region.nbTransactions.toLocaleString('fr-FR')} transactions immobilières enregistrées dans les données DVF depuis 2014.`
+    )
+  }
+
+  if (region.prixMedianM2) {
+    const evol = region.evolutionPrix.filter(e => e.prixMedianM2 !== null)
+    if (evol.length >= 2) {
+      const first = evol[0]
+      const last = evol[evol.length - 1]
+      const pct = first.prixMedianM2 ? Math.round(((last.prixMedianM2! - first.prixMedianM2) / first.prixMedianM2) * 100) : null
+      const tendance = pct !== null
+        ? (pct >= 0 ? `, en hausse de ${pct} % entre ${first.annee} et ${last.annee}` : `, en baisse de ${Math.abs(pct)} % entre ${first.annee} et ${last.annee}`)
+        : ''
+      parts.push(`Le prix médian au m² est de ${formatPrice(region.prixMedianM2)}${tendance}.`)
+    } else {
+      parts.push(`Le prix médian au m² est de ${formatPrice(region.prixMedianM2)}.`)
+    }
+  }
+
+  if (region.nbDpes > 0) {
+    parts.push(`${region.nbDpes.toLocaleString('fr-FR')} diagnostics de performance énergétique (DPE) ont été réalisés dans cette région.`)
+  }
+
+  return parts.join(' ')
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const res = await fetch(`${API_URL}/api/regions/${slug}`, { headers: { Accept: 'application/ld+json' } })
   if (!res.ok) return { title: 'Région introuvable' }
   const r: Region = await res.json()
   const nom = r.nom ?? slug
+  const prixTxt = r.prixMedianM2 ? `, prix médian ${r.prixMedianM2.toLocaleString('fr-FR')} €/m²` : ''
   const title = `${nom} — Départements et données immobilières`
-  const description = `Découvrez les ${r.departements.length} départements de la région ${nom} et leurs données cadastrales.`
+  const description = `Données immobilières de la région ${nom} : ${r.nbTransactions.toLocaleString('fr-FR')} transactions DVF${prixTxt}, ${r.departements.length} départements, ${r.nbCommunes.toLocaleString('fr-FR')} communes.`
   return {
     title, description,
     alternates: { canonical: `/region/${r.slug ?? slug}` },
@@ -48,6 +101,7 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
   const canonicalSlug = region.slug ?? slug
   const nom = region.nom ?? slug
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://geocopia.fr'
+  const summary = buildRegionSummary(region)
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -88,10 +142,49 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
               <span className="w-6 h-px" style={{ background: 'var(--amber-500)' }} />
               <span className="font-mono text-[13px]" style={{ color: 'rgba(255,255,255,0.65)' }}>{region.code}</span>
             </div>
-            <h1 className="text-[38px] font-semibold leading-tight text-white"
+            <h1 className="text-[38px] font-semibold leading-tight text-white mb-4"
               style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}>
               {nom}
             </h1>
+            {summary && (
+              <p className="text-sm leading-relaxed mb-6" style={{ color: 'rgba(255,255,255,0.6)', maxWidth: 620 }}>
+                {summary}
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+              {region.prixMedianM2 && (
+                <div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                    {region.prixMedianM2.toLocaleString('fr-FR')} €/m²
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Prix médian</div>
+                </div>
+              )}
+              {region.nbTransactions > 0 && (
+                <div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                    {region.nbTransactions.toLocaleString('fr-FR')}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Transactions DVF</div>
+                </div>
+              )}
+              {region.nbCommunes > 0 && (
+                <div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                    {region.nbCommunes.toLocaleString('fr-FR')}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Communes</div>
+                </div>
+              )}
+              {region.nbParcelles > 0 && (
+                <div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                    {region.nbParcelles.toLocaleString('fr-FR')}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Parcelles cadastrales</div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

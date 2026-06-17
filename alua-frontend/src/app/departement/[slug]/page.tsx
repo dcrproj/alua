@@ -16,14 +16,67 @@ export async function generateStaticParams() {
   }
 }
 
+function formatPrice(v: number) {
+  return v.toLocaleString('fr-FR') + ' €/m²'
+}
+
+function buildDeptSummary(dept: Departement): string {
+  const nom = dept.nom ?? ''
+  const parts: string[] = []
+
+  const communesTxt = dept.nbCommunesTotal > 0
+    ? `${dept.nbCommunesTotal.toLocaleString('fr-FR')} commune${dept.nbCommunesTotal > 1 ? 's' : ''}`
+    : null
+  const popTxt = dept.populationTotale
+    ? `${dept.populationTotale.toLocaleString('fr-FR')} habitants`
+    : null
+  if (communesTxt && popTxt) parts.push(`Le département ${nom} regroupe ${communesTxt} pour une population totale de ${popTxt}.`)
+  else if (communesTxt) parts.push(`Le département ${nom} regroupe ${communesTxt}.`)
+
+  if (dept.nbParcelles > 0 && dept.nbTransactions > 0) {
+    parts.push(
+      `Son territoire recense ${dept.nbParcelles.toLocaleString('fr-FR')} parcelles cadastrales et ${dept.nbTransactions.toLocaleString('fr-FR')} transactions immobilières enregistrées dans les données DVF depuis 2014.`
+    )
+  }
+
+  if (dept.prixMedianM2) {
+    const evol = dept.evolutionPrix.filter(e => e.prixMedianM2 !== null)
+    if (evol.length >= 2) {
+      const first = evol[0]
+      const last = evol[evol.length - 1]
+      const pct = first.prixMedianM2 ? Math.round(((last.prixMedianM2! - first.prixMedianM2) / first.prixMedianM2) * 100) : null
+      const tendance = pct !== null
+        ? (pct >= 0 ? `, en hausse de ${pct} % entre ${first.annee} et ${last.annee}` : `, en baisse de ${Math.abs(pct)} % entre ${first.annee} et ${last.annee}`)
+        : ''
+      parts.push(`Le prix médian au m² est de ${formatPrice(dept.prixMedianM2)}${tendance}.`)
+    } else {
+      parts.push(`Le prix médian au m² est de ${formatPrice(dept.prixMedianM2)}.`)
+    }
+  }
+
+  if (dept.nbDpes > 0) {
+    const dist = dept.distributionDpe
+    const total = Object.values(dist).reduce((a, b) => a + b, 0)
+    const bonnes = (dist['A'] ?? 0) + (dist['B'] ?? 0) + (dist['C'] ?? 0)
+    const pctBon = total > 0 ? Math.round((bonnes / total) * 100) : null
+    const dpeTxt = pctBon !== null
+      ? `${dept.nbDpes.toLocaleString('fr-FR')} diagnostics de performance énergétique (DPE) ont été réalisés, dont ${pctBon} % classés C ou mieux.`
+      : `${dept.nbDpes.toLocaleString('fr-FR')} diagnostics de performance énergétique (DPE) ont été réalisés.`
+    parts.push(dpeTxt)
+  }
+
+  return parts.join(' ')
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const res = await fetch(`${API_URL}/api/departements/${slug}`, { headers: { Accept: 'application/ld+json' } })
   if (!res.ok) return { title: 'Département introuvable' }
   const d: Departement = await res.json()
   const nom = d.nom ?? slug
+  const prixTxt = d.prixMedianM2 ? `, prix médian ${d.prixMedianM2.toLocaleString('fr-FR')} €/m²` : ''
   const title = `${nom} — Communes et données immobilières`
-  const description = `Explorez les communes du département ${nom} (${d.code}) et leurs données cadastrales.`
+  const description = `Données immobilières du département ${nom} (${d.code}) : ${d.nbTransactions.toLocaleString('fr-FR')} transactions DVF${prixTxt}, ${d.nbCommunesTotal} communes, ${d.nbParcelles.toLocaleString('fr-FR')} parcelles cadastrales.`
   return {
     title, description,
     alternates: { canonical: `/departement/${d.slug ?? slug}` },
@@ -44,6 +97,8 @@ export default async function DepartementPage({ params }: { params: Promise<{ sl
   if (dept.slug && dept.slug !== slug) {
     permanentRedirect(`/departement/${dept.slug}`)
   }
+
+  const summary = buildDeptSummary(dept)
 
   const canonicalSlug = dept.slug ?? slug
   const nom = dept.nom ?? slug
@@ -95,10 +150,49 @@ export default async function DepartementPage({ params }: { params: Promise<{ sl
               <span className="w-6 h-px" style={{ background: 'var(--amber-500)' }} />
               <span className="font-mono text-[13px]" style={{ color: 'rgba(255,255,255,0.65)' }}>{dept.code}</span>
             </div>
-            <h1 className="text-[38px] font-semibold leading-tight text-white"
+            <h1 className="text-[38px] font-semibold leading-tight text-white mb-4"
               style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}>
               {nom}
             </h1>
+            {summary && (
+              <p className="text-sm leading-relaxed mb-6" style={{ color: 'rgba(255,255,255,0.6)', maxWidth: 620 }}>
+                {summary}
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+              {dept.prixMedianM2 && (
+                <div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                    {dept.prixMedianM2.toLocaleString('fr-FR')} €/m²
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Prix médian</div>
+                </div>
+              )}
+              {dept.nbTransactions > 0 && (
+                <div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                    {dept.nbTransactions.toLocaleString('fr-FR')}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Transactions DVF</div>
+                </div>
+              )}
+              {dept.nbCommunesTotal > 0 && (
+                <div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                    {dept.nbCommunesTotal.toLocaleString('fr-FR')}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Communes</div>
+                </div>
+              )}
+              {dept.nbParcelles > 0 && (
+                <div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                    {dept.nbParcelles.toLocaleString('fr-FR')}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Parcelles cadastrales</div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

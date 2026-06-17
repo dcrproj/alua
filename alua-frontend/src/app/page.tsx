@@ -297,6 +297,15 @@ export default function HomePage() {
 
         </div>
       </main>
+
+      <div className="parcelle-footer">
+        <span>Sources : Cadastre IGN · DVF DGFiP · DPE ADEME · BAN · SIRENE INSEE</span>
+        <span className="shrink-0 flex items-center gap-4 ml-4">
+          <Link href="/mentions-legales" prefetch={false} style={{ color: 'inherit', textDecoration: 'none' }} className="hover:text-slate-600 transition-colors">Mentions légales</Link>
+          <span style={{ fontFamily: 'var(--font-mono)' }}>Geocopia</span>
+        </span>
+      </div>
+
     </div>
   )
 }

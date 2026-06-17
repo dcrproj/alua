@@ -68,6 +68,12 @@ export interface CommuneTransaction {
   adresse: string | null
 }
 
+export interface EvolutionPrix {
+  annee: number
+  nbVentes: number
+  prixMedianM2: number | null
+}
+
 export interface Departement {
   code: string
   slug?: string | null
@@ -76,6 +82,14 @@ export interface Departement {
   nomRegion?: string | null
   slugRegion?: string | null
   communes: { codeInsee: string; nom: string; slug: string; population: number | null }[]
+  nbCommunesTotal: number
+  populationTotale: number | null
+  nbParcelles: number
+  nbTransactions: number
+  nbDpes: number
+  prixMedianM2: number | null
+  evolutionPrix: EvolutionPrix[]
+  distributionDpe: Record<string, number>
 }
 
 export interface Region {
@@ -83,6 +97,13 @@ export interface Region {
   slug?: string | null
   nom: string | null
   departements: { code: string; nom: string; slug: string }[]
+  nbCommunes: number
+  populationTotale: number | null
+  nbParcelles: number
+  nbTransactions: number
+  nbDpes: number
+  prixMedianM2: number | null
+  evolutionPrix: EvolutionPrix[]
 }
 
 export interface Commune {

@@ -15,8 +15,15 @@ use App\State\RegionStateProvider;
 )]
 final class RegionOutput
 {
-    public string $code;
-    public ?string $slug        = null;
-    public ?string $nom         = null;
-    public array   $departements = [];  // [{code, nom, slug}]
+    public string  $code;
+    public ?string $slug            = null;
+    public ?string $nom             = null;
+    public array   $departements    = [];  // [{code, nom, slug}]
+    public int     $nbCommunes      = 0;
+    public ?int    $populationTotale = null;
+    public int     $nbParcelles     = 0;
+    public int     $nbTransactions  = 0;
+    public int     $nbDpes          = 0;
+    public ?float  $prixMedianM2    = null;
+    public array   $evolutionPrix   = [];  // [{annee, nbVentes, prixMedianM2}]
 }

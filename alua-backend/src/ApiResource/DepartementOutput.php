@@ -15,11 +15,19 @@ use App\State\DepartementStateProvider;
 )]
 final class DepartementOutput
 {
-    public string $code;
-    public ?string $slug       = null;
-    public ?string $nom        = null;
-    public ?string $codeRegion = null;
-    public ?string $nomRegion  = null;
-    public ?string $slugRegion = null;
-    public array   $communes   = [];  // [{codeInsee, nom, slug, population}] top 50
+    public string  $code;
+    public ?string $slug             = null;
+    public ?string $nom              = null;
+    public ?string $codeRegion       = null;
+    public ?string $nomRegion        = null;
+    public ?string $slugRegion       = null;
+    public array   $communes         = [];  // [{codeInsee, nom, slug, population}] top 50
+    public int     $nbCommunesTotal  = 0;
+    public ?int    $populationTotale = null;
+    public int     $nbParcelles      = 0;
+    public int     $nbTransactions   = 0;
+    public int     $nbDpes           = 0;
+    public ?float  $prixMedianM2     = null;
+    public array   $evolutionPrix    = [];  // [{annee, nbVentes, prixMedianM2}]
+    public array   $distributionDpe  = [];  // {A: n, B: n, …}
 }
