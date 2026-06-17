@@ -49,77 +49,22 @@ final class RegionStateProvider implements ProviderInterface
             'slug' => $d['slug'],
         ], $deptRows);
 
-        $totalsRow = $this->connection->fetchAssociative(
-            'SELECT COUNT(*) AS nb_communes, SUM(c.population) AS population_totale
-             FROM communes c
-             JOIN departements d ON d.code = c.code_departement
-             WHERE d.code_region = :code',
-            ['code' => $output->code]
-        );
-        $output->nbCommunes      = (int) ($totalsRow['nb_communes'] ?? 0);
-        $output->populationTotale = $totalsRow['population_totale'] !== null ? (int) $totalsRow['population_totale'] : null;
-
-        $output->nbParcelles = (int) $this->connection->fetchOne(
-            'SELECT COUNT(*) FROM parcelles p
-             JOIN communes c ON c.code_insee = p.commune_code
-             JOIN departements d ON d.code = c.code_departement
-             WHERE d.code_region = :code',
+        $statsRow = $this->connection->fetchAssociative(
+            'SELECT nb_communes, population_totale, nb_parcelles, nb_transactions,
+                    nb_dpes, prix_median_m2, evolution_prix
+             FROM stats_regions WHERE code_region = :code',
             ['code' => $output->code]
         );
 
-        $output->nbTransactions = (int) $this->connection->fetchOne(
-            'SELECT COUNT(*) FROM mutations_dvf m
-             JOIN communes c ON c.code_insee = m.code_commune
-             JOIN departements d ON d.code = c.code_departement
-             WHERE d.code_region = :code',
-            ['code' => $output->code]
-        );
-
-        $output->nbDpes = (int) $this->connection->fetchOne(
-            'SELECT COUNT(*) FROM dpes dp
-             JOIN communes c ON c.code_insee = dp.code_commune
-             JOIN departements d ON d.code = c.code_departement
-             WHERE d.code_region = :code',
-            ['code' => $output->code]
-        );
-
-        $prixMedian = $this->connection->fetchOne(
-            "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY m.valeur_fonciere / l.surface_reelle_bati)
-             FROM mutations_dvf m
-             JOIN mutations_dvf_lots l ON l.mutation_dvf_id = m.id
-             JOIN communes c ON c.code_insee = m.code_commune
-             JOIN departements d ON d.code = c.code_departement
-             WHERE d.code_region = :code
-               AND l.surface_reelle_bati > 0
-               AND m.valeur_fonciere > 0
-               AND m.nature_mutation = 'Vente'
-               AND m.date_mutation >= NOW() - INTERVAL '10 years'",
-            ['code' => $output->code]
-        );
-        $output->prixMedianM2 = $prixMedian !== false && $prixMedian !== null ? round((float) $prixMedian, 0) : null;
-
-        $evolRows = $this->connection->fetchAllAssociative(
-            "SELECT EXTRACT(YEAR FROM m.date_mutation) AS annee,
-                    COUNT(DISTINCT m.id) AS nb_ventes,
-                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY m.valeur_fonciere / l.surface_reelle_bati) AS prix_median
-             FROM mutations_dvf m
-             JOIN mutations_dvf_lots l ON l.mutation_dvf_id = m.id
-             JOIN communes c ON c.code_insee = m.code_commune
-             JOIN departements d ON d.code = c.code_departement
-             WHERE d.code_region = :code
-               AND l.surface_reelle_bati > 0
-               AND m.valeur_fonciere > 0
-               AND m.nature_mutation = 'Vente'
-               AND m.date_mutation >= NOW() - INTERVAL '5 years'
-             GROUP BY annee
-             ORDER BY annee",
-            ['code' => $output->code]
-        );
-        $output->evolutionPrix = array_map(fn(array $r) => [
-            'annee'        => (int) $r['annee'],
-            'nbVentes'     => (int) $r['nb_ventes'],
-            'prixMedianM2' => $r['prix_median'] !== null ? round((float) $r['prix_median'], 0) : null,
-        ], $evolRows);
+        if ($statsRow) {
+            $output->nbCommunes       = (int) ($statsRow['nb_communes'] ?? 0);
+            $output->populationTotale = $statsRow['population_totale'] !== null ? (int) $statsRow['population_totale'] : null;
+            $output->nbParcelles      = (int) ($statsRow['nb_parcelles'] ?? 0);
+            $output->nbTransactions   = (int) ($statsRow['nb_transactions'] ?? 0);
+            $output->nbDpes           = (int) ($statsRow['nb_dpes'] ?? 0);
+            $output->prixMedianM2     = $statsRow['prix_median_m2'] !== null ? round((float) $statsRow['prix_median_m2'], 0) : null;
+            $output->evolutionPrix    = json_decode($statsRow['evolution_prix'] ?? '[]', true) ?? [];
+        }
 
         return $output;
     }
