@@ -233,13 +233,6 @@ export default function HomePage() {
                 </Link>
               ))}
             </div>
-            <div style={{ marginTop: 16 }}>
-              <Link href="/regions" prefetch={false} style={{
-                fontSize: 14, color: 'var(--amber-600)', textDecoration: 'none', fontWeight: 500,
-              }}>
-                Voir tous les départements →
-              </Link>
-            </div>
           </section>
 
           {/* Ce que contient Geocopia */}
