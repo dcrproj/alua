@@ -154,7 +154,7 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
             <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
               {region.prixMedianM2 && (
                 <div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-500)' }}>
                     {region.prixMedianM2.toLocaleString('fr-FR')} €/m²
                   </div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Prix médian</div>
@@ -162,7 +162,7 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
               )}
               {region.nbTransactions > 0 && (
                 <div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-500)' }}>
                     {region.nbTransactions.toLocaleString('fr-FR')}
                   </div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Transactions DVF</div>
@@ -170,7 +170,7 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
               )}
               {region.nbCommunes > 0 && (
                 <div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-500)' }}>
                     {region.nbCommunes.toLocaleString('fr-FR')}
                   </div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Communes</div>
@@ -178,7 +178,7 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
               )}
               {region.nbParcelles > 0 && (
                 <div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-500)' }}>
                     {region.nbParcelles.toLocaleString('fr-FR')}
                   </div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Parcelles cadastrales</div>

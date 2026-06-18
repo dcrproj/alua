@@ -162,7 +162,7 @@ export default async function DepartementPage({ params }: { params: Promise<{ sl
             <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
               {dept.prixMedianM2 && (
                 <div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-500)' }}>
                     {dept.prixMedianM2.toLocaleString('fr-FR')} €/m²
                   </div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Prix médian</div>
@@ -170,7 +170,7 @@ export default async function DepartementPage({ params }: { params: Promise<{ sl
               )}
               {dept.nbTransactions > 0 && (
                 <div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-500)' }}>
                     {dept.nbTransactions.toLocaleString('fr-FR')}
                   </div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Transactions DVF</div>
@@ -178,7 +178,7 @@ export default async function DepartementPage({ params }: { params: Promise<{ sl
               )}
               {dept.nbCommunesTotal > 0 && (
                 <div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-500)' }}>
                     {dept.nbCommunesTotal.toLocaleString('fr-FR')}
                   </div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Communes</div>
@@ -186,7 +186,7 @@ export default async function DepartementPage({ params }: { params: Promise<{ sl
               )}
               {dept.nbParcelles > 0 && (
                 <div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-400)' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--amber-500)' }}>
                     {dept.nbParcelles.toLocaleString('fr-FR')}
                   </div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Parcelles cadastrales</div>
