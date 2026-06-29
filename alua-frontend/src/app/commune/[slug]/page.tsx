@@ -430,6 +430,35 @@ export default async function CommunePage({ params }: { params: Promise<{ slug: 
             </section>
           )}
 
+          {/* Contexte pour communes sans données DVF/DPE */}
+          {commune.nbTransactions === 0 && commune.nbDpes === 0 && (
+            <section style={{ marginBottom: 56, padding: '24px 28px', background: 'var(--slate-50)', borderRadius: 10, border: '1px solid var(--slate-200)' }}>
+              <h2 className="text-base font-semibold mb-3" style={{ color: 'var(--slate-900)' }}>
+                À propos de {nom}
+              </h2>
+              <div className="text-sm leading-relaxed space-y-3" style={{ color: 'var(--slate-600)' }}>
+                <p>
+                  {nom} est une commune{commune.nomDepartement ? ` du département ${commune.nomDepartement}` : ''}{commune.nomRegion ? `, en région ${commune.nomRegion}` : ''}, identifiée sous le code INSEE {commune.code}.
+                  {commune.nbParcelles > 0 && ` Elle compte ${commune.nbParcelles.toLocaleString('fr-FR')} parcelle${commune.nbParcelles > 1 ? 's' : ''} cadastrale${commune.nbParcelles > 1 ? 's' : ''} répertoriée${commune.nbParcelles > 1 ? 's' : ''} dans le Plan Cadastral Informatisé (PCI).`}
+                </p>
+                <p>
+                  Aucune transaction immobilière n&apos;a été enregistrée dans la base DVF (Demandes de Valeurs Foncières, DGFiP) pour {nom} depuis 2014. Cela peut s&apos;expliquer par la taille de la commune, son caractère rural, ou l&apos;absence de mutations foncières déclarées sur la période couverte par la base.
+                </p>
+                <p>
+                  Les données de diagnostics de performance énergétique (DPE) de l&apos;ADEME ne sont pas encore disponibles pour cette commune. Dès que des diagnostics seront enregistrés, les étiquettes énergétiques des logements (de A à G) apparaîtront sur cette page.
+                </p>
+                {commune.nomDepartement && commune.slugDepartement && (
+                  <p>
+                    Pour consulter les statistiques immobilières à l&apos;échelle du département,{' '}
+                    <Link href={`/departement/${commune.slugDepartement}`} className="hover:underline" style={{ color: 'var(--amber-600)' }}>
+                      voir la fiche {commune.nomDepartement}
+                    </Link>.
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
+
           {/* Communes voisines */}
           <Suspense>
             <CommunesVoisinesSection slug={canonicalSlug} />

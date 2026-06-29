@@ -42,8 +42,15 @@ export default async function RegionsPage() {
           >
             Données immobilières par région
           </h1>
-          <p className="text-sm mb-10" style={{ color: 'var(--slate-500)' }}>
+          <p className="text-sm mb-4" style={{ color: 'var(--slate-500)', lineHeight: 1.7, maxWidth: 680 }}>
             Prix médians DVF, diagnostics DPE et données cadastrales pour chaque région de France métropolitaine.
+          </p>
+          <p className="text-sm mb-10" style={{ color: 'var(--slate-500)', lineHeight: 1.7, maxWidth: 680 }}>
+            Geocopia agrège les données officielles de la DGFiP (transactions DVF depuis 2014), de l&apos;ADEME
+            (diagnostics de performance énergétique) et du Plan Cadastral Informatisé (IGN / DGFiP) pour
+            produire des statistiques immobilières à l&apos;échelle de chaque région, département et commune.
+            Sélectionnez une région ci-dessous pour accéder aux prix médians au m², à l&apos;évolution historique
+            des prix et à la répartition des étiquettes énergétiques.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>

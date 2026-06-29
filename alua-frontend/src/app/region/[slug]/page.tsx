@@ -1,6 +1,8 @@
 import { notFound, permanentRedirect } from 'next/navigation'
 import Link from 'next/link'
+import { Euro } from 'lucide-react'
 import type { Region } from '@/types/api'
+import { PrixEvolutionChart } from '@/components/fiche'
 import GeocopiaHeader from '@/components/GeocopiaHeader'
 
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL!
@@ -103,14 +105,46 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://geocopia.fr'
   const summary = buildRegionSummary(region)
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Carte', item: `${siteUrl}/carte` },
-      { '@type': 'ListItem', position: 2, name: nom, item: `${siteUrl}/region/${canonicalSlug}` },
-    ],
-  }
+  const evoFiltered = region.evolutionPrix.filter(d => d.prixMedianM2).sort((a, b) => a.annee - b.annee)
+  const trendPct = evoFiltered.length >= 2
+    ? Math.round(((evoFiltered.at(-1)!.prixMedianM2! - evoFiltered[0].prixMedianM2!) / evoFiltered[0].prixMedianM2!) * 100)
+    : null
+  const trendYears = evoFiltered.length >= 2 ? { from: evoFiltered[0].annee, to: evoFiltered.at(-1)!.annee } : null
+
+  const faqItems = [
+    region.prixMedianM2 ? {
+      q: `Quel est le prix médian au m² en ${nom} ?`,
+      a: `Le prix médian au m² en région ${nom} est de ${region.prixMedianM2.toLocaleString('fr-FR')} €/m²${trendPct !== null && trendYears ? `, ${trendPct >= 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(trendPct)} % entre ${trendYears.from} et ${trendYears.to}` : ''}, d'après les données DVF (DGFiP).`,
+    } : null,
+    region.nbTransactions > 0 ? {
+      q: `Combien de ventes immobilières ont eu lieu en ${nom} depuis 2014 ?`,
+      a: `${region.nbTransactions.toLocaleString('fr-FR')} transactions immobilières ont été enregistrées en région ${nom} dans la base DVF depuis 2014, réparties sur ${region.nbParcelles.toLocaleString('fr-FR')} parcelles cadastrales et ${region.nbCommunes.toLocaleString('fr-FR')} communes.`,
+    } : null,
+    region.nbDpes > 0 ? {
+      q: `Combien de diagnostics de performance énergétique ont été réalisés en ${nom} ?`,
+      a: `${region.nbDpes.toLocaleString('fr-FR')} diagnostics de performance énergétique (DPE) ont été enregistrés dans la région ${nom} selon les données de l'ADEME. Ces diagnostics couvrent les logements existants et permettent de connaître l'étiquette énergétique (de A à G) de chaque bien.`,
+    } : null,
+  ].filter((x): x is { q: string; a: string } => x !== null)
+
+  const jsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Carte', item: `${siteUrl}/carte` },
+        { '@type': 'ListItem', position: 2, name: nom, item: `${siteUrl}/region/${canonicalSlug}` },
+      ],
+    },
+    ...(faqItems.length >= 2 ? [{
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqItems.map(f => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    }] : []),
+  ]
 
   return (
     <>
@@ -189,6 +223,36 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
         </div>
 
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '40px 40px 0' }}>
+
+          {/* Évolution des prix */}
+          {evoFiltered.length >= 2 && (
+            <section style={{ marginBottom: 56 }}>
+              <div className="flex items-center gap-3.5 mb-5">
+                <div className="gc-icon-dvf w-9 h-9 rounded-lg flex items-center justify-center shrink-0">
+                  <Euro size={18} />
+                </div>
+                <h2 className="flex-1 text-xl font-semibold tracking-tight" style={{ color: 'var(--slate-900)', letterSpacing: '-0.005em' }}>
+                  Évolution des prix
+                </h2>
+                <span className="text-sm" style={{ color: 'var(--slate-500)' }}>DVF · DGFiP</span>
+              </div>
+              <PrixEvolutionChart data={region.evolutionPrix} />
+              <div className="grid grid-cols-3 gap-4 mt-5 pt-5" style={{ borderTop: '1px solid var(--slate-200)' }}>
+                {evoFiltered.slice(-3).reverse().map(d => (
+                  <div key={d.annee} style={{ textAlign: 'center' }}>
+                    <div className="text-xl font-semibold tabular-nums" style={{ color: 'var(--slate-900)', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}>
+                      {d.prixMedianM2!.toLocaleString('fr-FR')} €/m²
+                    </div>
+                    <div className="text-xs mt-1" style={{ color: 'var(--slate-500)' }}>
+                      {d.annee} · {d.nbVentes} vente{d.nbVentes > 1 ? 's' : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Départements */}
           {region.departements.length > 0 && (
             <section style={{ marginBottom: 56 }}>
               <h2 className="text-xl font-semibold mb-5" style={{ color: 'var(--slate-900)', letterSpacing: '-0.005em' }}>
@@ -208,6 +272,27 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
               </div>
             </section>
           )}
+
+          {/* FAQ */}
+          {faqItems.length >= 2 && (
+            <section style={{ marginBottom: 56 }}>
+              <h2 className="text-xl font-semibold mb-5" style={{ color: 'var(--slate-900)', letterSpacing: '-0.005em' }}>
+                Questions fréquentes
+              </h2>
+              <div>
+                {faqItems.map((f, i) => (
+                  <details key={i} className="group border-t" style={{ borderColor: 'var(--slate-200)' }}>
+                    <summary className="flex items-center justify-between gap-4 py-4 cursor-pointer list-none" style={{ color: 'var(--slate-900)' }}>
+                      <span className="font-medium text-sm">{f.q}</span>
+                      <span className="shrink-0 text-lg leading-none transition-transform group-open:rotate-45" style={{ color: 'var(--slate-400)' }}>+</span>
+                    </summary>
+                    <p className="pb-4 text-sm leading-relaxed" style={{ color: 'var(--slate-600)' }}>{f.a}</p>
+                  </details>
+                ))}
+              </div>
+            </section>
+          )}
+
         </div>
 
         <div className="parcelle-footer">

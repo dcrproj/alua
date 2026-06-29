@@ -1,6 +1,8 @@
 import { notFound, permanentRedirect } from 'next/navigation'
 import Link from 'next/link'
+import { Euro, Flame } from 'lucide-react'
 import type { Departement } from '@/types/api'
+import { PrixEvolutionChart, DpeDistributionBar, DpeBadge } from '@/components/fiche'
 import GeocopiaHeader from '@/components/GeocopiaHeader'
 
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL!
@@ -104,15 +106,51 @@ export default async function DepartementPage({ params }: { params: Promise<{ sl
   const nom = dept.nom ?? slug
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://geocopia.fr'
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Carte', item: `${siteUrl}/carte` },
-      ...(dept.slugRegion ? [{ '@type': 'ListItem', position: 2, name: dept.nomRegion ?? dept.codeRegion, item: `${siteUrl}/region/${dept.slugRegion}` }] : []),
-      { '@type': 'ListItem', position: dept.slugRegion ? 3 : 2, name: nom, item: `${siteUrl}/departement/${canonicalSlug}` },
-    ],
-  }
+  const evoFiltered = dept.evolutionPrix.filter(d => d.prixMedianM2).sort((a, b) => a.annee - b.annee)
+  const trendPct = evoFiltered.length >= 2
+    ? Math.round(((evoFiltered.at(-1)!.prixMedianM2! - evoFiltered[0].prixMedianM2!) / evoFiltered[0].prixMedianM2!) * 100)
+    : null
+  const trendYears = evoFiltered.length >= 2 ? { from: evoFiltered[0].annee, to: evoFiltered.at(-1)!.annee } : null
+
+  const dpeTotal = Object.values(dept.distributionDpe).reduce((s, n) => s + n, 0)
+  const dpeBon = (['A', 'B', 'C'] as const).reduce((s, l) => s + (dept.distributionDpe[l] ?? 0), 0)
+  const dpePct = dpeTotal > 0 ? Math.round((dpeBon / dpeTotal) * 100) : null
+
+  const faqItems = [
+    dept.prixMedianM2 ? {
+      q: `Quel est le prix médian au m² dans le département ${nom} ?`,
+      a: `Le prix médian au m² dans le département ${nom} est de ${dept.prixMedianM2.toLocaleString('fr-FR')} €/m²${trendPct !== null && trendYears ? `, ${trendPct >= 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(trendPct)} % entre ${trendYears.from} et ${trendYears.to}` : ''}, d'après les données DVF (DGFiP).`,
+    } : null,
+    dept.nbTransactions > 0 ? {
+      q: `Combien de ventes immobilières ont eu lieu dans le département ${nom} depuis 2014 ?`,
+      a: `${dept.nbTransactions.toLocaleString('fr-FR')} transactions immobilières ont été enregistrées dans le département ${nom} dans la base DVF depuis 2014, sur ${dept.nbParcelles.toLocaleString('fr-FR')} parcelles cadastrales et ${dept.nbCommunesTotal.toLocaleString('fr-FR')} communes.`,
+    } : null,
+    dpePct !== null && dept.nbDpes > 0 ? {
+      q: `Quelle est la performance énergétique des logements dans le département ${nom} ?`,
+      a: `${dpePct} % des ${dept.nbDpes.toLocaleString('fr-FR')} logements diagnostiqués dans le département ${nom} sont classés C ou mieux (étiquettes A, B ou C), selon les données ADEME.`,
+    } : null,
+  ].filter((x): x is { q: string; a: string } => x !== null)
+
+  const jsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Carte', item: `${siteUrl}/carte` },
+        ...(dept.slugRegion ? [{ '@type': 'ListItem', position: 2, name: dept.nomRegion ?? dept.codeRegion, item: `${siteUrl}/region/${dept.slugRegion}` }] : []),
+        { '@type': 'ListItem', position: dept.slugRegion ? 3 : 2, name: nom, item: `${siteUrl}/departement/${canonicalSlug}` },
+      ],
+    },
+    ...(faqItems.length >= 2 ? [{
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqItems.map(f => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    }] : []),
+  ]
 
   return (
     <>
@@ -197,6 +235,68 @@ export default async function DepartementPage({ params }: { params: Promise<{ sl
         </div>
 
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '40px 40px 0' }}>
+
+          {/* Évolution des prix */}
+          {evoFiltered.length >= 2 && (
+            <section style={{ marginBottom: 56 }}>
+              <div className="flex items-center gap-3.5 mb-5">
+                <div className="gc-icon-dvf w-9 h-9 rounded-lg flex items-center justify-center shrink-0">
+                  <Euro size={18} />
+                </div>
+                <h2 className="flex-1 text-xl font-semibold tracking-tight" style={{ color: 'var(--slate-900)', letterSpacing: '-0.005em' }}>
+                  Évolution des prix
+                </h2>
+                <span className="text-sm" style={{ color: 'var(--slate-500)' }}>DVF · DGFiP</span>
+              </div>
+              <PrixEvolutionChart data={dept.evolutionPrix} />
+              <div className="grid grid-cols-3 gap-4 mt-5 pt-5" style={{ borderTop: '1px solid var(--slate-200)' }}>
+                {evoFiltered.slice(-3).reverse().map(d => (
+                  <div key={d.annee} style={{ textAlign: 'center' }}>
+                    <div className="text-xl font-semibold tabular-nums" style={{ color: 'var(--slate-900)', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}>
+                      {d.prixMedianM2!.toLocaleString('fr-FR')} €/m²
+                    </div>
+                    <div className="text-xs mt-1" style={{ color: 'var(--slate-500)' }}>
+                      {d.annee} · {d.nbVentes} vente{d.nbVentes > 1 ? 's' : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Distribution DPE */}
+          {Object.keys(dept.distributionDpe).length > 0 && (
+            <section style={{ marginBottom: 56 }}>
+              <div className="flex items-center gap-3.5 mb-5">
+                <div className="gc-icon-dpe w-9 h-9 rounded-lg flex items-center justify-center shrink-0">
+                  <Flame size={18} />
+                </div>
+                <h2 className="flex-1 text-xl font-semibold tracking-tight" style={{ color: 'var(--slate-900)', letterSpacing: '-0.005em' }}>
+                  Distribution DPE
+                </h2>
+                <span className="text-sm" style={{ color: 'var(--slate-500)' }}>ADEME</span>
+              </div>
+              <DpeDistributionBar distribution={dept.distributionDpe} />
+              <div className="flex flex-wrap gap-3 mt-4">
+                {(['A', 'B', 'C', 'D', 'E', 'F', 'G'] as const).map(l => {
+                  const count = dept.distributionDpe[l] ?? 0
+                  if (!count) return null
+                  const pct = dpeTotal > 0 ? Math.round((count / dpeTotal) * 100) : 0
+                  return (
+                    <div key={l} className="flex items-center gap-2 text-sm">
+                      <DpeBadge label={l} size="lg" />
+                      <span style={{ color: 'var(--slate-700)' }} className="tabular-nums">
+                        {count.toLocaleString('fr-FR')}
+                      </span>
+                      <span style={{ color: 'var(--slate-400)', fontSize: 12 }}>{pct} %</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Communes principales */}
           {dept.communes.length > 0 && (
             <section style={{ marginBottom: 56 }}>
               <h2 className="text-xl font-semibold mb-5" style={{ color: 'var(--slate-900)', letterSpacing: '-0.005em' }}>
@@ -216,6 +316,27 @@ export default async function DepartementPage({ params }: { params: Promise<{ sl
               </div>
             </section>
           )}
+
+          {/* FAQ */}
+          {faqItems.length >= 2 && (
+            <section style={{ marginBottom: 56 }}>
+              <h2 className="text-xl font-semibold mb-5" style={{ color: 'var(--slate-900)', letterSpacing: '-0.005em' }}>
+                Questions fréquentes
+              </h2>
+              <div>
+                {faqItems.map((f, i) => (
+                  <details key={i} className="group border-t" style={{ borderColor: 'var(--slate-200)' }}>
+                    <summary className="flex items-center justify-between gap-4 py-4 cursor-pointer list-none" style={{ color: 'var(--slate-900)' }}>
+                      <span className="font-medium text-sm">{f.q}</span>
+                      <span className="shrink-0 text-lg leading-none transition-transform group-open:rotate-45" style={{ color: 'var(--slate-400)' }}>+</span>
+                    </summary>
+                    <p className="pb-4 text-sm leading-relaxed" style={{ color: 'var(--slate-600)' }}>{f.a}</p>
+                  </details>
+                ))}
+              </div>
+            </section>
+          )}
+
         </div>
 
         <div className="parcelle-footer">
