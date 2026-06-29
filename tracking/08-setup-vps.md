@@ -443,6 +443,23 @@ crontab -e
 
 # SIRENE (établissements actifs) : refresh géré par TTL Messenger (TTL 30 jours)
 # Pas de cron dédié nécessaire — premier import manuel : php8.3 bin/console app:import:sirene
+
+# ── Purge disque (maintenance) ────────────────────────────────────────────────
+
+# Next.js fetch-cache > 2j
+0 3 * * * find /home/david/www/alua/alua-frontend/.next/cache/fetch-cache -mtime +2 -delete 2>/dev/null
+
+# Next.js images cache > 7j (optimisation d'images, grossit sans limite sinon)
+0 3 * * * find /home/david/www/alua/alua-frontend/.next/cache/images -mtime +7 -delete 2>/dev/null
+
+# Symfony http_cache > 3j — quotidien (TTL max POI = 90j mais on borne l'espace disque)
+0 4 * * * find /home/david/www/alua/alua-backend/var/http_cache -type f -mtime +3 -delete 2>/dev/null
+
+# Logs backend — tronquer à 50 Mo si dépassement (hebdo)
+0 5 * * 0 find /home/david/www/alua/alua-backend/var/log -name "*.log" -size +50M -exec truncate -s 50M {} \;
+
+# Alerte disque > 85%
+0 6 * * * df / | awk 'NR==2 {gsub(/%/,"",$5); if($5>85) print "ALERTE disque "$5"% utilisé"}' | mail -s "[geocopia] Disque plein" contact@geocopia.fr 2>/dev/null
 ```
 
 ---
