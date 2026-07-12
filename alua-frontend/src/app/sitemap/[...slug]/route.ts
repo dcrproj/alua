@@ -44,6 +44,21 @@ ${ids.map(id => `  <url><loc>${SITE_URL}/parcelle/${id}</loc><changefreq>yearly<
     }
   }
 
+  if (name === 'pages.xml') {
+    const staticPages = [
+      { loc: `${SITE_URL}/`, priority: '1.0', changefreq: 'weekly' },
+      { loc: `${SITE_URL}/regions`, priority: '0.9', changefreq: 'monthly' },
+      { loc: `${SITE_URL}/open-data`, priority: '0.8', changefreq: 'monthly' },
+      { loc: `${SITE_URL}/a-propos`, priority: '0.7', changefreq: 'monthly' },
+      { loc: `${SITE_URL}/mentions-legales`, priority: '0.4', changefreq: 'yearly' },
+    ]
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${staticPages.map(p => `  <url><loc>${p.loc}</loc><changefreq>${p.changefreq}</changefreq><priority>${p.priority}</priority></url>`).join('\n')}
+</urlset>`
+    return new NextResponse(xml, { headers: { 'Content-Type': 'application/xml; charset=utf-8' } })
+  }
+
   if (name === 'admin.xml') {
     try {
       const res = await fetch(`${API_URL}/api/sitemap/admin`)

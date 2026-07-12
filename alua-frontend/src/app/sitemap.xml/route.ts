@@ -9,6 +9,7 @@ const ADRESSES_DEPTS = ['75', '69', '13', '33', '31', '06', '67', '76', '44', '3
 
 export async function GET() {
   const urls: string[] = [
+    `${SITE_URL}/sitemap/pages.xml`,
     `${SITE_URL}/sitemap/communes.xml`,
     `${SITE_URL}/sitemap/admin.xml`,
   ]
