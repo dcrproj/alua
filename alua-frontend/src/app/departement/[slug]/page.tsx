@@ -342,6 +342,7 @@ export default async function DepartementPage({ params }: { params: Promise<{ sl
         <div className="parcelle-footer">
           <span>Geocopia — données cadastrales françaises</span>
           <span className="shrink-0 flex items-center gap-4 ml-4">
+            <Link href="/a-propos" prefetch={false} className="hover:text-slate-600 transition-colors">À propos</Link>
             <Link href="/mentions-legales" prefetch={false} className="hover:text-slate-600 transition-colors">Mentions légales</Link>
             <span className="font-mono">Geocopia</span>
           </span>

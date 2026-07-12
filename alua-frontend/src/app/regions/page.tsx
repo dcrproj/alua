@@ -84,6 +84,7 @@ export default async function RegionsPage() {
         <div className="parcelle-footer">
           <span>Sources : Cadastre IGN · DVF DGFiP · DPE ADEME</span>
           <span className="shrink-0 flex items-center gap-4 ml-4">
+            <Link href="/a-propos" className="hover:text-slate-600 transition-colors">À propos</Link>
             <Link href="/mentions-legales" className="hover:text-slate-600 transition-colors">Mentions légales</Link>
             <span className="font-mono">Geocopia</span>
           </span>

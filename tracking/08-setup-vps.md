@@ -2,6 +2,7 @@
 
 > Procédure complète pour reproduire l'environnement de production sur un VPS vierge.
 > Serveur cible : OVH VPS-3 — 8 vCPU, 24 GB RAM, 200 GB NVMe, Debian 13
+> Disque additionnel : OVH 100 Go (`/dev/sdb`) monté sur `/mnt/data` — contient les MBTiles (73 Go)
 > Utilisateurs : `debian` (admin sudo) · `david` (applicatif, sans sudo)
 
 ---
@@ -130,6 +131,37 @@ mkdir -p /home/david/www/alua
 mkdir -p /home/david/data/alua_tiles
 chown -R david:david /home/david/www /home/david/data
 ```
+
+---
+
+## 8b. Disque additionnel (MBTiles)
+
+Le disque additionnel OVH 100 Go (`/dev/sdb`) stocke les MBTiles (73 Go).
+UUID : `77e8aa27-784a-4d74-bec9-e6ad7b451697`
+
+```bash
+# Formater (si disque vierge)
+mkfs.ext4 /dev/sdb
+
+# Monter
+mkdir -p /mnt/data
+mount /dev/sdb /mnt/data
+
+# Persistant au reboot
+echo "UUID=77e8aa27-784a-4d74-bec9-e6ad7b451697 /mnt/data ext4 defaults,nofail 0 2" >> /etc/fstab
+
+# Permissions
+chown david:david /mnt/data
+```
+
+Les MBTiles sont stockés dans `/mnt/data/alua_tiles/` et référencés directement dans `martin.yaml` :
+```yaml
+mbtiles:
+  - /mnt/data/alua_tiles/france-parcelles.mbtiles
+```
+
+> Note : `/home/david/data/alua_tiles` est un symlink vers `/mnt/data/alua_tiles` (pour compatibilité scripts).
+> Martin pointe sur le chemin réel `/mnt/data/` — ne pas utiliser le symlink dans `martin.yaml`.
 
 ---
 
