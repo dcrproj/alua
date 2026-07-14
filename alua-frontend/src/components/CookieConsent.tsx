@@ -14,6 +14,11 @@ export default function CookieConsent() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const tac = (window as any).tarteaucitron
       if (!tac) return
+
+      // user config et job AVANT init
+      tac.user.adsenseId = 'ca-pub-4247463955296045'
+      ;(tac.job = tac.job || []).push('adsense')
+
       tac.init({
         privacyUrl: '/mentions-legales',
         orientation: 'bottom',
@@ -30,8 +35,6 @@ export default function CookieConsent() {
         useExternalCss: false,
         googleConsentMode: 'enable',
       })
-      tac.user.adsenseId = 'ca-pub-4247463955296045'
-      ;(tac.job = tac.job || []).push('adsense')
     }
     document.head.appendChild(script)
   }, [])
