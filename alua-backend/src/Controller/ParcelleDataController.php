@@ -20,50 +20,53 @@ class ParcelleDataController extends AbstractController
     #[Route('/api/parcelles/{idParcelle}/transactions', methods: ['GET'])]
     public function transactions(string $idParcelle): JsonResponse
     {
-        $parcelleUuid = $this->connection->fetchOne(
-            'SELECT id FROM parcelles WHERE id_parcelle = :id',
-            ['id' => $idParcelle]
-        );
+        try {
+            $parcelleUuid = $this->connection->fetchOne(
+                'SELECT id FROM parcelles WHERE id_parcelle = :id',
+                ['id' => $idParcelle]
+            );
 
-        if (!$parcelleUuid) {
+            if (!$parcelleUuid) {
+                return $this->json(['items' => [], 'updatedAt' => null]);
+            }
+
+            $rows = $this->connection->fetchAllAssociative(
+                "SELECT m.id_mutation, m.date_mutation, m.nature_mutation, m.valeur_fonciere,
+                        json_agg(json_build_object(
+                            'typeLocal',     l.type_local,
+                            'surfaceBati',   l.surface_reelle_bati,
+                            'surfaceTerrain',l.surface_terrain,
+                            'surfaceCarrez', l.surface_carrez,
+                            'nombrePieces',  l.nombre_pieces_principales
+                        ) ORDER BY l.type_local NULLS LAST) AS lots
+                 FROM mutations_dvf_lots l
+                 JOIN mutations_dvf m ON m.id = l.mutation_dvf_id
+                 WHERE l.parcelle_id = :id
+                 GROUP BY m.id, m.id_mutation, m.date_mutation, m.nature_mutation, m.valeur_fonciere
+                 ORDER BY m.date_mutation DESC
+                 LIMIT 100",
+                ['id' => $parcelleUuid]
+            );
+
+            $updatedAt = $this->connection->fetchOne(
+                'SELECT MAX(m.created_at)
+                 FROM mutations_dvf m
+                 WHERE m.id IN (SELECT mutation_dvf_id FROM mutations_dvf_lots WHERE parcelle_id = :id)',
+                ['id' => $parcelleUuid]
+            );
+
+            $items = array_map(fn(array $r) => [
+                'idMutation'    => $r['id_mutation'],
+                'date'          => $r['date_mutation'],
+                'nature'        => $r['nature_mutation'],
+                'valeurFonciere'=> $r['valeur_fonciere'] !== null ? (float) $r['valeur_fonciere'] : null,
+                'lots'          => json_decode($r['lots'], true),
+            ], $rows);
+
+            return $this->json(['items' => $items, 'updatedAt' => $updatedAt ?: null]);
+        } catch (\Throwable) {
             return $this->json(['items' => [], 'updatedAt' => null]);
         }
-
-        $rows = $this->connection->fetchAllAssociative(
-            "SELECT m.id_mutation, m.date_mutation, m.nature_mutation, m.valeur_fonciere,
-                    json_agg(json_build_object(
-                        'typeLocal',     l.type_local,
-                        'surfaceBati',   l.surface_reelle_bati,
-                        'surfaceTerrain',l.surface_terrain,
-                        'surfaceCarrez', l.surface_carrez,
-                        'nombrePieces',  l.nombre_pieces_principales
-                    ) ORDER BY l.type_local NULLS LAST) AS lots
-             FROM mutations_dvf_lots l
-             JOIN mutations_dvf m ON m.id = l.mutation_dvf_id
-             WHERE l.parcelle_id = :id
-             GROUP BY m.id, m.id_mutation, m.date_mutation, m.nature_mutation, m.valeur_fonciere
-             ORDER BY m.date_mutation DESC
-             LIMIT 100",
-            ['id' => $parcelleUuid]
-        );
-
-        $updatedAt = $this->connection->fetchOne(
-            'SELECT MAX(m.created_at)
-             FROM mutations_dvf m
-             JOIN mutations_dvf_lots l ON l.mutation_dvf_id = m.id
-             WHERE l.parcelle_id = :id',
-            ['id' => $parcelleUuid]
-        );
-
-        $items = array_map(fn(array $r) => [
-            'idMutation'    => $r['id_mutation'],
-            'date'          => $r['date_mutation'],
-            'nature'        => $r['nature_mutation'],
-            'valeurFonciere'=> $r['valeur_fonciere'] !== null ? (float) $r['valeur_fonciere'] : null,
-            'lots'          => json_decode($r['lots'], true),
-        ], $rows);
-
-        return $this->json(['items' => $items, 'updatedAt' => $updatedAt ?: null]);
     }
 
     #[Route('/api/parcelles/{idParcelle}/dpes', methods: ['GET'])]
