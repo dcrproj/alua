@@ -271,8 +271,18 @@ export default function OpenDataPage() {
 
         </div>
 
+        {/* Lien guides */}
+        <div style={{ maxWidth: 900, margin: '32px auto 0', padding: '0 40px' }}>
+          <p style={{ fontSize: 14, color: 'var(--slate-500)' }}>
+            Pour comprendre ce que contiennent ces données et comment les utiliser,{' '}
+            <Link href="/guides" style={{ color: 'var(--amber-600)', textDecoration: 'none', fontWeight: 500 }}>
+              consultez le guide des données immobilières →
+            </Link>
+          </p>
+        </div>
+
         {/* Footer */}
-        <div className="parcelle-footer" style={{ marginTop: 56 }}>
+        <div className="parcelle-footer" style={{ marginTop: 40 }}>
           <span>Geocopia — données immobilières France</span>
           <span className="font-mono shrink-0 ml-4">geocopia.fr</span>
         </div>

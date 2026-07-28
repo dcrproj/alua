@@ -49,6 +49,7 @@ ${ids.map(id => `  <url><loc>${SITE_URL}/parcelle/${id}</loc><changefreq>yearly<
       { loc: `${SITE_URL}/`, priority: '1.0', changefreq: 'weekly' },
       { loc: `${SITE_URL}/regions`, priority: '0.9', changefreq: 'monthly' },
       { loc: `${SITE_URL}/open-data`, priority: '0.8', changefreq: 'monthly' },
+      { loc: `${SITE_URL}/guides`, priority: '0.8', changefreq: 'monthly' },
       { loc: `${SITE_URL}/a-propos`, priority: '0.7', changefreq: 'monthly' },
       { loc: `${SITE_URL}/mentions-legales`, priority: '0.4', changefreq: 'yearly' },
     ]

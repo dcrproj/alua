@@ -235,6 +235,54 @@ export default function HomePage() {
             </div>
           </section>
 
+          {/* À qui s'adresse Geocopia */}
+          <section style={{ marginTop: 56 }}>
+            <h2 style={{
+              fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22,
+              color: 'var(--slate-900)', marginBottom: 6, letterSpacing: '-0.01em',
+            }}>
+              À qui s&apos;adresse Geocopia ?
+            </h2>
+            <p style={{ color: 'var(--slate-500)', fontSize: 14, marginBottom: 20 }}>
+              Des données publiques utiles dans de nombreuses situations
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
+              {[
+                {
+                  who: 'Acheteurs et vendeurs',
+                  desc: 'Vérifiez le prix réel auquel des biens similaires ont été vendus dans le quartier. Les données DVF sont les mêmes que celles utilisées par les notaires.',
+                },
+                {
+                  who: 'Locataires et propriétaires',
+                  desc: 'Consultez le DPE d\'un logement pour anticiper la facture énergétique, et vérifiez si le bien est concerné par les futures interdictions de location des passoires thermiques.',
+                },
+                {
+                  who: 'Professionnels de l\'immobilier',
+                  desc: 'Agents, notaires, gestionnaires : accédez rapidement aux transactions DVF, au cadastre et aux risques naturels pour préparer un dossier ou conseiller un client.',
+                },
+                {
+                  who: 'Journalistes et chercheurs',
+                  desc: 'Explorez les tendances du marché immobilier par commune, département ou région. Les données sources sont accessibles en open data via la page dédiée.',
+                },
+              ].map(item => (
+                <div key={item.who} style={{
+                  padding: '20px 22px', borderRadius: 10, background: 'white',
+                  border: '1px solid var(--slate-200)',
+                }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--slate-900)', marginBottom: 8 }}>{item.who}</div>
+                  <div style={{ fontSize: 13, color: 'var(--slate-500)', lineHeight: 1.65 }}>{item.desc}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <Link href="/guides" prefetch={false} style={{
+                fontSize: 14, color: 'var(--amber-600)', textDecoration: 'none', fontWeight: 500,
+              }}>
+                Comprendre les données DVF, DPE et cadastre →
+              </Link>
+            </div>
+          </section>
+
           {/* Ce que contient Geocopia */}
           <section style={{
             marginTop: 56, padding: 32, borderRadius: 12,
