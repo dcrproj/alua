@@ -99,10 +99,10 @@ class ParcelleDataController extends AbstractController
         );
 
         $updatedAt = $this->connection->fetchOne(
-            'SELECT MAX(d.created_at)
+            "SELECT MAX(d.ttl_expires_at) - INTERVAL '180 days'
              FROM dpes d
              JOIN parcelles_addresses pa ON pa.address_id = d.address_id
-             WHERE pa.parcelle_id = :id AND d.address_id IS NOT NULL',
+             WHERE pa.parcelle_id = :id AND d.address_id IS NOT NULL",
             ['id' => $parcelleUuid]
         );
 
